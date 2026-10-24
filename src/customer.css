@@ -47,6 +47,19 @@
 .customer-footer a:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 4px; }
 .team-sidebar > nav { margin-top: 40px; }
 .team-back-link { display: flex; align-items: center; gap: 9px; margin: auto 12px 28px; font-size: 11px; color: var(--accent-strong); }
+.staff-viewbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: calc(100% - 96px); max-width: 1144px; margin: 0 auto; padding: 8px 14px; border: 1px solid var(--accent-border); border-radius: 9px; background: var(--accent-subtle); color: var(--accent-strong); }
+.staff-viewbar-account { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11px; }
+.staff-viewbar-account > span { min-width: 0; overflow-wrap: anywhere; }
+.staff-viewbar-account strong { font-weight: 600; }
+.staff-viewbar > div, .staff-topbar-controls { display: flex; align-items: center; gap: 17px; }
+.staff-viewbar a, .staff-customer-link { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; color: var(--accent-strong); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.staff-viewbar a:hover, .staff-customer-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.staff-signout { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.staff-signout:hover { background: var(--accent-soft); border-color: var(--accent-border); }
+.staff-topbar { gap: 14px; }
+.staff-account-email { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
+.staff-session-error { padding: 12px 16px; margin: 16px auto 0; width: calc(100% - 48px); max-width: 1144px; border: 1px solid #edcfc4; border-radius: 8px; background: #fff3ef; color: #994a3a; font-size: 13px; line-height: 1.6; }
+@media (max-width: 1150px) { .staff-account-email { display: none; } }
 @media (max-width: 600px) {
   .customer-header { min-height: 76px; padding: 14px 22px; }
   .customer-header .brand-wordmark { font-size: 23px; }
@@ -55,4 +68,9 @@
   .customer-main { padding: 24px 18px 40px; }
   .customer-footer { width: calc(100% - 40px); align-items: flex-start; flex-direction: column; gap: 9px; padding: 20px 0; }
   .customer-footer nav { gap: 24px; flex-wrap: wrap; }
+  .staff-viewbar { width: calc(100% - 40px); flex-wrap: wrap; gap: 0; padding: 12px; }
+  .staff-viewbar > div { width: 100%; justify-content: space-between; gap: 10px; margin-top: 7px; }
+  .staff-topbar { height: auto; min-height: 67px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; gap: 4px; }
+  .staff-topbar-controls { gap: 10px; margin-left: auto; }
+  .staff-customer-link { font-size: 11px; }
 }

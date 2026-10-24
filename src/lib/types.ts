@@ -58,5 +58,6 @@ export interface Contractor {
   color: string;
   sourceUrl: string;
 }
-export type Page = 'inspection' | 'requests' | 'admin' | 'contractors';
+export type CustomerRequest = Omit<InspectionRequest, 'priority' | 'notes' | 'source'>;
+export type Page = 'inspection' | 'requests' | 'admin' | 'contractors' | 'login';
 export interface PageProps { onNavigate: (page: Page) => void; }

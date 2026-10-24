@@ -7,7 +7,7 @@ const appUrl = pathToFileURL(resolve('dist/offline.html')).href;
 const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j19sAAAAASUVORK5CYII=', 'base64');
 const providerCard = (page: Page, name: string) => page.getByRole('article').filter({ has: page.getByRole('heading', { name, exact: true }) });
 
-test('offline app persists uploads, case updates, notes, and provides contractor comparison', async ({ page }, testInfo) => {
+test('offline customer preview persists uploads, blocks staff access, and provides contractor comparison', async ({ page }, testInfo) => {
   const browserErrors: string[] = [];
   page.on('pageerror', error => browserErrors.push(error.message));
   await page.goto(`${appUrl}#inspection`);
@@ -42,31 +42,16 @@ test('offline app persists uploads, case updates, notes, and provides contractor
   expect(sizes).toEqual([tinyPng.length, video.length]);
   await page.screenshot({ path: testInfo.outputPath('request-submitted-desktop.png'), fullPage: true });
 
-  await page.getByRole('link', { name: 'Team dashboard', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Search clients, addresses, or requests' }).fill('Offline Browser Test');
-  await page.getByRole('button', { name: 'Open case for Offline Browser Test', exact: true }).click();
-  let caseDialog = page.getByRole('dialog', { name: 'Offline Browser Test', exact: true });
-  await expect(caseDialog.locator('.admin-attachment')).toHaveCount(2);
-  await caseDialog.getByLabel('Status', { exact: true }).selectOption('In review');
-  await caseDialog.getByLabel('Priority', { exact: true }).selectOption('High');
-  await caseDialog.getByLabel('Assigned to', { exact: true }).fill('Demo Inspector');
-  await caseDialog.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(caseDialog.getByText('Case updated.', { exact: true })).toBeVisible();
-  await caseDialog.getByLabel('Add an internal note').fill('Offline verification: photos and walkthrough reviewed.');
-  await caseDialog.getByRole('button', { name: 'Add note', exact: true }).click();
-  await expect(caseDialog.getByText('Offline verification: photos and walkthrough reviewed.', { exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('admin-case-desktop.png'), fullPage: true });
-  await page.reload();
-  await page.getByRole('button', { name: 'Open case for Offline Browser Test', exact: true }).click();
-  caseDialog = page.getByRole('dialog', { name: 'Offline Browser Test', exact: true });
-  await expect(caseDialog.getByLabel('Status', { exact: true })).toHaveValue('In review');
-  await expect(caseDialog.getByLabel('Priority', { exact: true })).toHaveValue('High');
-  await expect(caseDialog.getByLabel('Assigned to', { exact: true })).toHaveValue('Demo Inspector');
-  await expect(caseDialog.getByText('Offline verification: photos and walkthrough reviewed.', { exact: true })).toBeVisible();
-  await caseDialog.getByRole('button', { name: 'Close case details' }).click();
-  await page.getByRole('link', { name: 'Back to customer page', exact: true }).click();
+  await page.getByRole('link', { name: 'Staff sign in', exact: true }).click();
+  await expect(page.getByText('Staff access is available in the running app.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open staff sign in', exact: true })).toHaveAttribute('href', 'http://127.0.0.1:5173/#login');
+  await expect(page.getByLabel('Password', { exact: true })).toHaveCount(0);
+  await page.goto(`${appUrl}#admin`);
+  await expect(page.getByText('Staff access is available in the running app.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Search clients, addresses, or requests' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'MoldLens home', exact: true }).click();
   await page.getByRole('link', { name: 'My requests', exact: true }).click();
-  await expect(page.locator('.request-status-pill')).toHaveText('In review');
+  await expect(page.locator('.request-status-pill')).toHaveText('New');
 
   await page.getByRole('link', { name: 'Find a specialist', exact: true }).click();
   await providerCard(page, 'Mold Busters').getByRole('checkbox', { name: 'Compare', exact: true }).check();

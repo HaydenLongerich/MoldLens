@@ -1,0 +1,23 @@
+.staff-login { width: 100%; max-width: 440px; margin: 0 auto; }
+.staff-login-heading { text-align: center; margin-bottom: 26px; }
+.staff-login-icon { display: grid; place-items: center; width: 54px; height: 54px; margin: 0 auto 20px; color: var(--accent); background: var(--accent-soft); border-radius: 14px; }
+.staff-login h1 { color: var(--heading); font-size: 29px; letter-spacing: -.8px; line-height: 1.25; margin: 0 0 11px; }
+.staff-login-heading p, .staff-login-message p { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 0; }
+.staff-login-card { padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 7px 30px #343a4005; }
+.staff-login-card fieldset { display: flex; flex-direction: column; gap: 20px; min-width: 0; padding: 0; margin: 0; border: 0; }
+.staff-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.staff-field label { color: var(--ink); font-size: 14px; font-weight: 600; }
+.staff-field input { min-width: 0; width: 100%; min-height: 48px; padding: 11px 13px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 16px; }
+.staff-field small { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.staff-login .staff-submit { width: 100%; min-height: 48px; font-size: 14px; }
+.staff-setup-help, .staff-login-notice { padding: 13px 14px; margin: 0 0 22px; color: var(--accent-strong); background: var(--accent-subtle); border: 1px solid var(--accent-border); border-radius: 8px; font-size: 12px; line-height: 1.7; }
+.staff-form-error { margin: 0; padding: 12px 14px; color: #994a3a; background: #fff3ef; border: 1px solid #edcfc4; border-radius: 8px; font-size: 13px; line-height: 1.6; }
+.staff-login-back { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; margin-top: 15px; color: var(--muted); font-size: 13px; }
+.staff-login-back:hover { color: var(--accent-strong); }
+.staff-login-message { text-align: center; }
+.staff-login-message p { margin-bottom: 24px; }
+.staff-login-message p[role="status"] { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 0; }
+.staff-spinner { animation: staffSpin 1s linear infinite; }
+@keyframes staffSpin { to { transform: rotate(360deg); } }
+@media (max-width: 540px) { .staff-login-card { padding: 23px 20px; } .staff-login h1 { font-size: 27px; } }
+@media (prefers-reduced-motion: reduce) { .staff-spinner { animation: none; } }

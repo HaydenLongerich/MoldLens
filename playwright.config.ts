@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Every run gets an isolated data directory, so test submissions never enter the demo workspace.
-const testDataDir = mkdtempSync(join(tmpdir(), 'moldlens-e2e-'));
+const testDataDir = process.env.MOLDLENS_E2E_DATA_DIR || mkdtempSync(join(tmpdir(), 'moldlens-e2e-'));
+process.env.MOLDLENS_E2E_DATA_DIR = testDataDir;
 
 export default defineConfig({
   testDir: './tests',

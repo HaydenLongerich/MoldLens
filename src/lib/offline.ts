@@ -1,4 +1,4 @@
-import type { Attachment, Contractor, InspectionRequest, Priority, RequestStatus } from './types';
+import type { Attachment, Contractor, CustomerRequest, InspectionRequest } from './types';
 
 declare global {
   interface Window {
@@ -12,8 +12,6 @@ const ATTACHMENT_PREFIX = 'indexeddb:';
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const FILE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'video/mp4', 'video/quicktime', 'video/webm']);
-const STATUS_VALUES: RequestStatus[] = ['New', 'In review', 'Scheduled', 'Completed', 'Referred'];
-const PRIORITY_VALUES: Priority[] = ['Low', 'Medium', 'High'];
 const PROPERTY_VALUES = ['House', 'Apartment', 'Commercial', 'Not specified'];
 const AREA_VALUES = ['Basement', 'Bathroom', 'Attic', 'Kitchen', 'Living area', 'Other', 'Not specified'];
 const SIZE_VALUES = ['Small — under 1 m²', 'Medium — 1 to 3 m²', 'Large — over 3 m²', 'Not sure'];
@@ -246,10 +244,19 @@ async function validateMedia(files: File[]): Promise<void> {
 
 export const offlineApi = {
   async getRequests(): Promise<InspectionRequest[]> {
+    throw new Error('Staff access requires the running MoldLens server.');
+  },
+
+  async getMyRequests(): Promise<CustomerRequest[]> {
+    let ids: string[] = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem('moldbusters-my-requests') || '[]');
+      if (Array.isArray(saved)) ids = saved.filter((id): id is string => typeof id === 'string');
+    } catch { /* An empty local history shows the customer empty state. */ }
     const db = await database();
     const items = await transact(db, ['requests'], 'readonly', tx => result(tx.objectStore('requests').getAll()) as Promise<InspectionRequest[]>);
-    items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return hydrate(items, db);
+    const mine = items.filter(item => !item.isDemo && ids.includes(item.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return (await hydrate(mine, db)).map(({ priority: _priority, notes: _notes, source: _source, ...request }) => request);
   },
 
   async createRequest(form: FormData): Promise<InspectionRequest> {
@@ -274,51 +281,12 @@ export const offlineApi = {
     return (await hydrate([item], db))[0];
   },
 
-  async updateRequest(id: string, updates: Partial<InspectionRequest>): Promise<InspectionRequest> {
-    if (!updates || typeof updates !== 'object' || Array.isArray(updates)) throw new Error('Please provide valid case updates.');
-    const allowed = ['status', 'priority', 'assignee', 'scheduledAt'];
-    if (!Object.keys(updates).length || Object.keys(updates).some(key => !allowed.includes(key))) throw new Error('Only status, priority, assignment, and inspection date can be updated.');
-    const changes: Partial<InspectionRequest> = {};
-    if ('status' in updates) changes.status = choiceField(updates, 'status', STATUS_VALUES, 'case status');
-    if ('priority' in updates) changes.priority = choiceField(updates, 'priority', PRIORITY_VALUES, 'priority');
-    if ('assignee' in updates) {
-      changes.assignee = textField(updates, 'assignee', 'a team member name', 0, 100);
-    }
-    if ('scheduledAt' in updates) {
-      if (typeof updates.scheduledAt !== 'string' || (updates.scheduledAt !== '' && (updates.scheduledAt.length > 40 || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(updates.scheduledAt) || !Number.isFinite(Date.parse(updates.scheduledAt))))) throw new Error('Please enter a valid inspection date and time.');
-      changes.scheduledAt = updates.scheduledAt ? new Date(updates.scheduledAt).toISOString() : '';
-    }
-    const db = await database();
-    const item = await transact(db, ['requests'], 'readwrite', async tx => {
-      const store = tx.objectStore('requests');
-      const existing = await result(store.get(id)) as InspectionRequest | undefined;
-      if (!existing) throw new Error('This inspection request could not be found.');
-      const updated: InspectionRequest = { ...existing, ...changes, updatedAt: new Date().toISOString() };
-      if (updated.status === 'Scheduled' && !updated.scheduledAt) {
-        throw new Error('Please set an inspection date and time before marking the case as scheduled.');
-      }
-      store.put(updated);
-      return updated;
-    });
-    return (await hydrate([item], db))[0];
+  async updateRequest(_id: string, _updates: Partial<InspectionRequest>): Promise<InspectionRequest> {
+    throw new Error('Staff access requires the running MoldLens server.');
   },
 
-  async addNote(id: string, text: string): Promise<InspectionRequest> {
-    const note = textField({ text }, 'text', 'a note', 1, 3000);
-    const db = await database();
-    const item = await transact(db, ['requests'], 'readwrite', async tx => {
-      const store = tx.objectStore('requests');
-      const existing = await result(store.get(id)) as InspectionRequest | undefined;
-      if (!existing) throw new Error('This inspection request could not be found.');
-      const now = new Date().toISOString();
-      const updated: InspectionRequest = {
-        ...existing, updatedAt: now,
-        notes: [...existing.notes, { id: uniqueId(), text: note, createdAt: now }],
-      };
-      store.put(updated);
-      return updated;
-    });
-    return (await hydrate([item], db))[0];
+  async addNote(_id: string, _text: string): Promise<InspectionRequest> {
+    throw new Error('Staff access requires the running MoldLens server.');
   },
 
   async getContractors(): Promise<Contractor[]> {

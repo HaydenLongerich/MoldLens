@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j19sAAAAASUVORK5CYII=', 'base64');
 
-test('one-page request validates, uploads photo and video, and persists without optional details', async ({ page, request }, testInfo) => {
+test('one-page request validates, uploads photo and video, and persists without optional details', async ({ page }, testInfo) => {
   const browserErrors: string[] = [];
   page.on('pageerror', error => browserErrors.push(error.message));
   await page.goto('/#inspection');
@@ -44,7 +44,7 @@ test('one-page request validates, uploads photo and video, and persists without 
   await expect(page.getByTestId('request-status')).toHaveText('New');
   await page.screenshot({ path: testInfo.outputPath('request-submitted-desktop.png'), fullPage: true });
   for (const url of await page.locator('.my-request-attachment').evaluateAll(links => links.map(link => (link as HTMLAnchorElement).href))) {
-    const response = await request.get(url);
+    const response = await page.request.get(url);
     expect(response.ok()).toBeTruthy();
     expect(Number(response.headers()['content-length'])).toBeGreaterThan(0);
   }

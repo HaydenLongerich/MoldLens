@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Camera, ChevronDown, FileText, MapPin, RefreshCw } from 'lucide-react';
 import { api } from '../lib/api';
-import type { InspectionRequest, PageProps, RequestStatus } from '../lib/types';
+import type { CustomerRequest, PageProps, RequestStatus } from '../lib/types';
 import './simple-requests.css';
-
-function getMyRequestIds(): string[] {
-  try {
-    const ids = JSON.parse(localStorage.getItem('moldbusters-my-requests') || '[]');
-    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
-  } catch {
-    return [];
-  }
-}
 
 const statusDescriptions: Record<RequestStatus, string> = {
   New: 'Your request is saved and ready for review.',
@@ -26,7 +17,7 @@ function dateLabel(value: string) {
 }
 
 export default function RequestsPage({ onNavigate }: PageProps) {
-  const [requests, setRequests] = useState<InspectionRequest[]>([]);
+  const [requests, setRequests] = useState<CustomerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -35,10 +26,8 @@ export default function RequestsPage({ onNavigate }: PageProps) {
     setLoading(true);
     setError('');
     try {
-      const ids = getMyRequestIds();
-      const data = await api.getRequests();
-      setRequests(data.filter(request => ids.includes(request.id) && !request.isDemo)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      const data = await api.getMyRequests();
+      setRequests(data.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'We couldn’t load your requests. Please try again.');
     } finally {
@@ -53,7 +42,7 @@ export default function RequestsPage({ onNavigate }: PageProps) {
       <header className="simple-requests-heading">
         <div>
           <h1>My requests</h1>
-          <p>Check the status of your request.</p>
+          <p>Check requests submitted from this browser.</p>
         </div>
         {requests.length > 0 && <button className="btn btn-secondary" onClick={() => onNavigate('inspection')}>New request</button>}
       </header>

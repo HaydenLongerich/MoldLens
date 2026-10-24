@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Camera, Check, ChevronDown, FileVideo, ImagePlus, LoaderCircle, X } from 'lucide-react';
 import { api } from '../lib/api';
-import type { InspectionRequest, PageProps } from '../lib/types';
+import type { CustomerRequest, PageProps } from '../lib/types';
 import './simple-inspection.css';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -53,7 +53,7 @@ export default function InspectionPage({ onNavigate }: PageProps) {
   const [submitError, setSubmitError] = useState('');
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState<InspectionRequest | null>(null);
+  const [submitted, setSubmitted] = useState<CustomerRequest | null>(null);
   const [historySaved, setHistorySaved] = useState(true);
   const fileInput = useRef<HTMLInputElement>(null);
   const optionalDetails = useRef<HTMLDetailsElement>(null);
@@ -120,11 +120,15 @@ export default function InspectionPage({ onNavigate }: PageProps) {
       body.append('data', JSON.stringify({ ...form, postalCode: form.postalCode.trim().toUpperCase() }));
       files.forEach(file => body.append('files', file));
       const result = await api.createRequest(body);
-      try {
-        const saved = JSON.parse(localStorage.getItem(REQUESTS_KEY) || '[]');
-        const ids = Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : [];
-        localStorage.setItem(REQUESTS_KEY, JSON.stringify([...new Set([...ids, result.id])]));
-      } catch { setHistorySaved(false); }
+      // Server-backed history uses an HttpOnly ownership cookie. Local IDs are
+      // only an index for the standalone customer's IndexedDB preview.
+      if (window.location.protocol === 'file:') {
+        try {
+          const saved = JSON.parse(localStorage.getItem(REQUESTS_KEY) || '[]');
+          const ids = Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : [];
+          localStorage.setItem(REQUESTS_KEY, JSON.stringify([...new Set([...ids, result.id])]));
+        } catch { setHistorySaved(false); }
+      }
       setSubmitted(result);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Your request could not be saved. Please try again.');
