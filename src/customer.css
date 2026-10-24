@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f9f6;
+  background: var(--bg);
 }
 .customer-header {
   display: flex;
@@ -21,12 +21,12 @@
   align-items: center;
   min-height: 44px;
   padding: 8px 0 8px 18px;
-  color: #436354;
+  color: var(--ink);
   font-size: 14px;
   font-weight: 550;
 }
-.customer-header nav a:hover { color: var(--forest); text-decoration: underline; text-underline-offset: 5px; }
-.customer-header nav a[aria-current="page"] { color: var(--forest); font-weight: 700; }
+.customer-header nav a:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 5px; }
+.customer-header nav a[aria-current="page"] { color: var(--accent-strong); font-weight: 700; }
 .customer-main { width: 100%; flex: 1; padding: 32px 24px 64px; outline: none; }
 .customer-main-contractors { max-width: 1200px; margin: 0 auto; }
 .customer-footer {
@@ -38,15 +38,15 @@
   max-width: 1144px;
   margin: 0 auto;
   padding: 22px 0;
-  border-top: 1px solid #e6ebe4;
+  border-top: 1px solid var(--border);
   font-size: 12px;
-  color: #7c887e;
+  color: var(--muted);
 }
 .customer-footer nav { display: flex; gap: 24px; }
-.customer-footer a { display: inline-flex; align-items: center; min-height: 34px; color: #657869; }
-.customer-footer a:hover { color: var(--forest); text-decoration: underline; text-underline-offset: 4px; }
+.customer-footer a { display: inline-flex; align-items: center; min-height: 34px; color: var(--muted); }
+.customer-footer a:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 4px; }
 .team-sidebar > nav { margin-top: 40px; }
-.team-back-link { display: flex; align-items: center; gap: 9px; margin: auto 12px 28px; font-size: 11px; color: #65816d; }
+.team-back-link { display: flex; align-items: center; gap: 9px; margin: auto 12px 28px; font-size: 11px; color: var(--accent-strong); }
 @media (max-width: 600px) {
   .customer-header { min-height: 76px; padding: 14px 22px; }
   .customer-header .brand-wordmark { font-size: 23px; }
