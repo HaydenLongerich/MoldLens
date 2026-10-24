@@ -1,0 +1,133 @@
+{
+  "job": "Sample Job 2 - Virtual Assessment (VA)",
+  "service": "Virtual Assessment - live video call in the Mold Busters Virtual Inspection app",
+  "property": "Sample Property 02, Quebec (apartment)",
+  "client": "Tenant",
+  "price_paid": "$100 incl. tax (paid)",
+  "people": [
+    {
+      "role": "Booked by",
+      "who": "Client, online (self-booking page)"
+    },
+    {
+      "role": "Virtual inspector",
+      "who": "Staff B, MSC ME, CMI"
+    },
+    {
+      "role": "Report written / reviewed by",
+      "who": "Staff C (admin support) / Staff D (admin support)"
+    },
+    {
+      "role": "Follow-up",
+      "who": "Automated SMS + emails (Close CRM, 'Bruce' virtual support)"
+    }
+  ],
+  "client_concern": "From the online booking form: black and white mold inside the washing machine, around the washer and dryer, inside ventilation ducts and around the oven. A strong smell in the apartment that does not go away even after deep cleaning. Client said they are a tenant.",
+  "timeline": [
+    {
+      "when_eastern": "Sun Sep 7, 2025 09:30",
+      "step": "Online booking",
+      "system": "Booking page -> Google Calendar 'MB - Virtual Inspections'",
+      "what": "Client books a VA slot and fills a short form (address, owner/tenant, concerns). The calendar event is created automatically with the form answers, an admin link to the video platform, and an automatic AI 'financial analysis' of the area."
+    },
+    {
+      "when_eastern": "Sun Sep 7 09:30",
+      "step": "Confirmation",
+      "system": "Email + SMS",
+      "what": "Booking email with app links (Android/iOS) - client joins with their phone number. SMS reminder with a pre-inspection survey (Google Form)."
+    },
+    {
+      "when_eastern": "Sun Sep 7",
+      "step": "CRM",
+      "system": "Close CRM",
+      "what": "Lead created automatically (via API) from the VA calendar."
+    },
+    {
+      "when_eastern": "Mon Sep 8 11:30",
+      "step": "Video call",
+      "system": "Mold Busters Virtual Inspection app (vr.bustmold.com)",
+      "what": "Inspector talks with the client (about 19 min). From 4:12 to 7:08 the client walks the camera through the laundry (washer drum, dryer vent), ceiling and wall vents and the oven. Inspector captures 3 snapshots for the report."
+    },
+    {
+      "when_eastern": "Mon Sep 8",
+      "step": "Invoice",
+      "system": "FreshBooks",
+      "what": "Invoice INV-CASE02: $100 total. Paid."
+    },
+    {
+      "when_eastern": "Mon Sep 8 12:48-13:00",
+      "step": "Report + estimate",
+      "system": "Brain (internal CRM) + Asana",
+      "what": "Admin writes the Virtual Assessment Report, second admin reviews. Asana card created, tagged PAID, notes 'report SENT, estimate SENT'. Card closed in 12 minutes."
+    },
+    {
+      "when_eastern": "Mon Sep 8 13:00",
+      "step": "Report sent",
+      "system": "Email (support mailbox)",
+      "what": "Client gets the report link (inspector in CC). About 1.5 hours after the call started."
+    },
+    {
+      "when_eastern": "Mon Sep 8",
+      "step": "Review request",
+      "system": "Close CRM (SMS)",
+      "what": "Status moves 'Survey Request' -> 'Review Request'. SMS asks the client to rate the VA app in the app stores."
+    },
+    {
+      "when_eastern": "Sep 12 - Sep 27",
+      "step": "Nurture emails",
+      "system": "Close CRM (email)",
+      "what": "6 automated 'MB Marketplace' emails, every 3 days (referrals to plumbers, electricians, handymen)."
+    },
+    {
+      "when_eastern": "Today",
+      "step": "Status",
+      "system": "Close / FreshBooks",
+      "what": "IAQ estimate viewed, not accepted. No further booking found."
+    }
+  ],
+  "findings": [
+    "Client reported health issues while living in the unit.",
+    "Client reported musty odors.",
+    "On the video call the client showed visible discoloration (dryer vent hose, ceiling vent, wall vent grille). It may be fungal, but it cannot be confirmed without sampling."
+  ],
+  "recommendations": [
+    "See a doctor about the health issues",
+    "Book a professional Indoor Air Quality (IAQ) test for mold",
+    "Limit time and traffic in the affected areas until then"
+  ],
+  "estimate": {
+    "number": "EST-CASE02 (FreshBooks)",
+    "amount": "$520 + 14.975% GST/QST = $597.87",
+    "time": "On-site visit",
+    "scope": [
+      "Indoor Air Quality assessment on site",
+      "75 L air samples sent to an accredited third-party lab",
+      "Visual check during sampling (thermal camera, moisture, temperature/humidity/dew point as needed)",
+      "Written summary once lab results arrive; full payment needed before results are released"
+    ],
+    "status": "Viewed by client, not accepted"
+  },
+  "files": [
+    {
+      "file": "Report_Virtual_Sample.pdf",
+      "what": "De-identified reference report; compare against inputs rather than treating every statement as verified ground truth."
+    },
+    {
+      "file": "Photos/",
+      "what": "3 source photographs, unchanged."
+    },
+    {
+      "file": "Job_Story.pdf",
+      "what": "Readable case summary and workflow."
+    },
+    {
+      "file": "job_timeline.json",
+      "what": "Structured case and timeline for building/testing."
+    },
+    {
+      "file": "Videos/Walkthrough_Silent.mp4",
+      "what": "2m56s client-camera walkthrough, audio and metadata removed. Full identifiable call is excluded."
+    }
+  ],
+  "note": "Direct client identifiers and original invoice/estimate IDs replaced. Staff names use consistent aliases. Times remain as recorded in Eastern time. Source inconsistencies are preserved. This is an illustrative case, not a verified benchmark."
+}

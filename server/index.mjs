@@ -1,0 +1,29 @@
+import express from 'express';
+import path from 'node:path';
+import { createApp, projectDirectory } from './app.mjs';
+
+const port = Number(process.env.PORT || 5173);
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid port number.');
+const { app } = await createApp();
+let vite;
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(projectDirectory, 'dist')));
+  app.get('*', (_request, response) => response.sendFile(path.join(projectDirectory, 'dist', 'index.html')));
+} else {
+  const { createServer } = await import('vite');
+  vite = await createServer({
+    root: projectDirectory,
+    server: { middlewareMode: true, hmr: { host: '127.0.0.1', port: port + 1 } },
+    appType: 'spa',
+  });
+  app.use(vite.middlewares);
+}
+
+const server = app.listen(port, '127.0.0.1', () => {
+  console.log(`\n  MoldLens · local demo\n  http://127.0.0.1:${port}\n`);
+});
+server.requestTimeout = 120_000;
+server.on('error', (error) => { console.error(`Could not start the local server: ${error.code || 'server error'}`); process.exitCode = 1; void vite?.close(); });
+const shutdown = async () => { server.close(); await vite?.close(); };
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

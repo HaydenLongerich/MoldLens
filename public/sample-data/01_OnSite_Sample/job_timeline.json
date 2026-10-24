@@ -1,0 +1,155 @@
+{
+  "job": "Sample Job 1 - On-site Inspection",
+  "service": "Visual & Diagnostic Mold Inspection (on site)",
+  "property": "Sample Property 01, Ontario (house)",
+  "client": "Homeowner",
+  "price_paid": "$195 + HST = $220.35 (paid)",
+  "people": [
+    {
+      "role": "Booked by",
+      "who": "Staff A - client support"
+    },
+    {
+      "role": "Inspected on site by",
+      "who": "Staff A, CMI (as listed in the report)"
+    },
+    {
+      "role": "Estimate prepared by",
+      "who": "Staff B, inspector (as listed in FreshBooks, Asana and Close)"
+    },
+    {
+      "role": "Report written / reviewed by",
+      "who": "Staff C (admin support) / Staff D (admin support)"
+    },
+    {
+      "role": "Follow-up",
+      "who": "Automated SMS from Close, then Staff E and Staff F (client support)"
+    }
+  ],
+  "client_concern": "Client was worried about the basement. They saw something that looked like efflorescence and had done an ERMI test at home (score 13.2). They wanted to know how big the problem was and where it came from. Office note: 'Please do a full diagnostic inspection'.",
+  "timeline": [
+    {
+      "when_eastern": "Oct 1, 2026",
+      "step": "Booking",
+      "system": "Google Calendar (MB - Ottawa-Gatineau)",
+      "what": "Client support (Staff A) books the inspection. The calendar entry holds the client concern, price and a note for the inspector (entry created Oct 1; its note says booked Sept 5)."
+    },
+    {
+      "when_eastern": "Tue Oct 6, 2026 11:30",
+      "step": "Inspection",
+      "system": "On site",
+      "what": "Inspector visits: thermal camera, moisture meter, hygrometer, swab tests, attic and exterior check. 21 photos taken."
+    },
+    {
+      "when_eastern": "Wed Oct 7",
+      "step": "Invoice",
+      "system": "FreshBooks",
+      "what": "Inspection invoice INV-CASE01 created: $195 + HST = $220.35. Paid."
+    },
+    {
+      "when_eastern": "Wed Oct 7",
+      "step": "Estimate",
+      "system": "FreshBooks",
+      "what": "Remediation estimate EST-CASE01 created: $3,700 + HST."
+    },
+    {
+      "when_eastern": "Wed Oct 7 12:42-14:04",
+      "step": "Report",
+      "system": "Brain (our internal CRM) + Asana",
+      "what": "Admin writes the report from the inspector's notes and photos; second admin reviews it. Tracked as a 'Deliverables to complete' subtask in Asana."
+    },
+    {
+      "when_eastern": "Wed Oct 7 14:06",
+      "step": "Project card",
+      "system": "Asana",
+      "what": "Job card created automatically in 'MB Solutions: October 2026' with links to Close, FreshBooks client, invoice, estimate and report. Staff move it: Share Deliverables -> Collect Payment."
+    },
+    {
+      "when_eastern": "Thu Oct 8 09:05",
+      "step": "Report sent",
+      "system": "Email (support mailbox)",
+      "what": "Client gets an email with a link to the report. Asana card moves to 'Follow Up'."
+    },
+    {
+      "when_eastern": "Fri Oct 9",
+      "step": "Sales follow-up starts",
+      "system": "Close CRM",
+      "what": "Lead + opportunity ($3,700, 50%) in Close. First automated SMS: 'I sent you the estimate... text me if anything doesn't make sense.'"
+    },
+    {
+      "when_eastern": "Mon Oct 12",
+      "step": "Follow-up #2",
+      "system": "Close CRM (SMS)",
+      "what": "Automated SMS offers 10% off the remediation."
+    },
+    {
+      "when_eastern": "Wed Oct 14",
+      "step": "Follow-up #3",
+      "system": "Close CRM (SMS)",
+      "what": "'Checking in one last time' - also offers a post-remediation clearance report."
+    },
+    {
+      "when_eastern": "Mon Oct 19",
+      "step": "Follow-up #4",
+      "system": "Close CRM (SMS)",
+      "what": "'Still interested, or should we close your case?'"
+    },
+    {
+      "when_eastern": "Thu Oct 22 16:02-16:33",
+      "step": "Manual follow-up",
+      "system": "Asana + Dialpad (SMS)",
+      "what": "Close sequence ends, task 'assign to CSP'. Support agent sends a personal SMS from Dialpad and posts a screenshot in Asana. Card closed."
+    },
+    {
+      "when_eastern": "Today",
+      "step": "Status",
+      "system": "Close / FreshBooks",
+      "what": "No reply from client found. Estimate viewed, not accepted. Lead still 'Potential'."
+    }
+  ],
+  "findings": [
+    "Basement: small discoloration under the sink, swab test positive for mold. No odor, no thermal anomalies, humidity and moisture normal.",
+    "Rest of the house checked for free: thermal anomalies on the top floor, in the living room below the roof and on the laundry room ceiling.",
+    "Both upstairs washrooms: discoloration on grout and silicone, standing water in the en-suite, failed ball-slope test in the shower, leaking tub faucet with high moisture below.",
+    "Attic: insulation uneven and heavily disturbed, visible discoloration.",
+    "Outside: poor drainage and a low spot (depression) by the main entrance."
+  ],
+  "recommendations": [
+    "Professional mold remediation",
+    "Insulation company for the attic",
+    "Roofer to check the roof above the living room"
+  ],
+  "estimate": {
+    "number": "EST-CASE01 (FreshBooks)",
+    "amount": "$3,700 + 13% HST = $4,181",
+    "time": "1 day",
+    "scope": [
+      "Areas: two washrooms and the attic",
+      "Containment: plastic barriers + zipper doors, negative air when possible",
+      "Treatment: HEPA vacuum + manual cleaning, then 2 steps - stain removal, then eco fungicide (drywall ceilings, grout, tiles, attic trusses and sheathing)",
+      "Disinfection: HEPA vacuum + fogging of the contained area",
+      "Clearance: visual check + 3 instant swabs by the supervisor, written clearance certificate",
+      "Terms: 40% deposit to book, estimate valid 60 days, reconstruction not included"
+    ],
+    "status": "Viewed by client, not accepted yet"
+  },
+  "files": [
+    {
+      "file": "Report_OnSite_Sample.pdf",
+      "what": "De-identified reference report; compare against inputs rather than treating every statement as verified ground truth."
+    },
+    {
+      "file": "Photos/",
+      "what": "21 source photographs, unchanged."
+    },
+    {
+      "file": "Job_Story.pdf",
+      "what": "Readable case summary and workflow."
+    },
+    {
+      "file": "job_timeline.json",
+      "what": "Structured case and timeline for building/testing."
+    }
+  ],
+  "note": "Direct client identifiers and original invoice/estimate IDs replaced. Staff names use consistent aliases. Times remain as recorded in Eastern time. Source inconsistencies are preserved. This is an illustrative case, not a verified benchmark."
+}

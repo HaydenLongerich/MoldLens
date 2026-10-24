@@ -1,0 +1,58 @@
+.customer-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8f9f6;
+}
+.customer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88px;
+  padding: 20px 48px;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.customer-header .brand { padding: 0; gap: 8px; }
+.customer-header .brand-wordmark { font-size: 25px; letter-spacing: -1.1px; }
+.customer-header nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0 8px 18px;
+  color: #436354;
+  font-size: 14px;
+  font-weight: 550;
+}
+.customer-header nav a:hover { color: var(--forest); text-decoration: underline; text-underline-offset: 5px; }
+.customer-header nav a[aria-current="page"] { color: var(--forest); font-weight: 700; }
+.customer-main { width: 100%; flex: 1; padding: 32px 24px 64px; outline: none; }
+.customer-main-contractors { max-width: 1200px; margin: 0 auto; }
+.customer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  width: calc(100% - 96px);
+  max-width: 1144px;
+  margin: 0 auto;
+  padding: 22px 0;
+  border-top: 1px solid #e6ebe4;
+  font-size: 12px;
+  color: #7c887e;
+}
+.customer-footer nav { display: flex; gap: 24px; }
+.customer-footer a { display: inline-flex; align-items: center; min-height: 34px; color: #657869; }
+.customer-footer a:hover { color: var(--forest); text-decoration: underline; text-underline-offset: 4px; }
+.team-sidebar > nav { margin-top: 40px; }
+.team-back-link { display: flex; align-items: center; gap: 9px; margin: auto 12px 28px; font-size: 11px; color: #65816d; }
+@media (max-width: 600px) {
+  .customer-header { min-height: 76px; padding: 14px 22px; }
+  .customer-header .brand-wordmark { font-size: 23px; }
+  .customer-header .brand-icon { width: 31px; }
+  .customer-header nav a { font-size: 13px; }
+  .customer-main { padding: 24px 18px 40px; }
+  .customer-footer { width: calc(100% - 40px); align-items: flex-start; flex-direction: column; gap: 9px; padding: 20px 0; }
+  .customer-footer nav { gap: 24px; flex-wrap: wrap; }
+}
