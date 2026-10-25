@@ -4,6 +4,7 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { createApp } from '../server/app.mjs';
+import { confirmedQuote } from './proposal-fixtures.mjs';
 import { demoLocations } from '../server/demo-companies.mjs';
 import { dispatch, jsonRequest, withCookie, cookieHeader } from './http-helpers.mjs';
 
@@ -45,7 +46,9 @@ test('new guests reset visible screenings and contact gate; email resumes only t
   await post(app, '/demo-customer/name', { username: 'Test Alex' }, first.cookie);
   const report = (await sample(app, first.cookie)).json();
   assert.equal(report.demoUsername, 'Test Alex'); assert.equal(report.contactRequired, true);
-  await post(app, `/reports/${report.id}/sample-quotes`, {}, first.cookie);
+  assert.equal((await post(app, `/reports/${report.id}/sample-quotes`, {}, first.cookie)).status, 410);
+  const contractor = cookieHeader(await post(app, '/demo-login', { companyId: 'moldtech' }));
+  assert.equal((await post(app, `/reports/${report.id}/quote`, confirmedQuote(885, ['basement', 'bathroom', 'attic']), contractor)).status, 201);
   const contact = { email: 'demo-customer@example.test', phone: '905-555-0100' };
   assert.equal((await post(app, '/customer-contact', contact, first.cookie)).status, 200);
   assert.equal((await get(app, '/reports', first.cookie)).json()[0].contactRequired, false);
@@ -58,7 +61,7 @@ test('new guests reset visible screenings and contact gate; email resumes only t
   assert.equal(resumed.status, 200); assert.equal(resumed.json().customer.username, 'Test Alex');
   const resumedCookie = cookieHeader(resumed);
   const reports = (await get(app, '/reports', resumedCookie)).json();
-  assert.equal(reports.length, 1); assert.equal(reports[0].id, report.id); assert.equal(reports[0].quotes.length, 3);
+  assert.equal(reports.length, 1); assert.equal(reports[0].id, report.id); assert.equal(reports[0].quotes.length, 1);
   assert.equal((await get(app, '/customer-contact', resumedCookie)).json().contact.phone, '+19055550100');
   const disk = JSON.parse(await readFile(path.join(dataDirectory, 'marketplace.json'), 'utf8'));
   assert.equal(disk.reports.length, 2, 'Reset preserves data, and changes only the active demo identity');

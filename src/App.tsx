@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Aperture, ArrowLeft, Building2, ClipboardList, FilePlus2, LayoutDashboard, LogOut, Menu, ShieldCheck, UsersRound } from 'lucide-react';
 import LandingPage from './pages/LandingPage';
 import AdminPage from './pages/AdminPage';
@@ -9,6 +10,10 @@ import { AUTH_STORAGE_SIGNAL, getSession, isOfflinePreview, signalAuthChange, si
 import type { Page } from './lib/types';
 import { localTesting } from './lib/testing';
 import './customer.css';
+import './motion.css';
+
+type PageTransition = { ready?: Promise<void>; finished: Promise<void>; skipTransition: () => void };
+type TransitionDocument = Document & { startViewTransition?: (update: () => void) => PageTransition };
 
 const pageLabels: Record<Page, string> = {
   home: 'A clearer picture of your home', inspection: 'Request a review', screening: 'Start a screening', requests: 'My requests',
@@ -32,6 +37,9 @@ function Brand() {
 
 export default function App() {
   const [page, setPage] = useState<Page>(readPage);
+  const currentPage = useRef(readPage());
+  const navigationVersion = useRef(0);
+  const pageTransition = useRef<PageTransition | null>(null);
   const [routeHash, setRouteHash] = useState(() => window.location.hash);
   const [menuOpen, setMenuOpen] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -47,7 +55,6 @@ export default function App() {
   const navigate = useCallback((next: Page) => {
     next = next === 'requests' ? 'customer' : next === 'inspection' ? 'screening' : next;
     window.location.hash = next;
-    setPage(next);
     setMenuOpen(false);
   }, []);
 
@@ -110,10 +117,25 @@ export default function App() {
       const [route, query] = window.location.hash.slice(1).split('?');
       const alias = route === 'requests' ? 'customer' : route === 'inspection' ? 'screening' : route === 'contractors' ? 'partner' : null;
       if (alias) window.history.replaceState(null, '', `#${alias}${query ? `?${query}` : ''}`);
-      setPage(readPage());
-      setRouteHash(window.location.hash);
-      setMenuOpen(false);
-      window.scrollTo(0, 0);
+      const next = readPage();
+      const changed = next !== currentPage.current;
+      const hash = window.location.hash;
+      const version = ++navigationVersion.current;
+      currentPage.current = next;
+      pageTransition.current?.skipTransition();
+      const update = () => {
+        if (version !== navigationVersion.current) return;
+        setPage(next); setRouteHash(hash); setMenuOpen(false); window.scrollTo(0, 0);
+      };
+      const start = (document as TransitionDocument).startViewTransition;
+      if (changed && start && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        try {
+          const transition = start.call(document, () => flushSync(update));
+          pageTransition.current = transition;
+          void transition.ready?.catch(() => {});
+          void transition.finished.catch(() => {}).finally(() => { if (pageTransition.current === transition) pageTransition.current = null; });
+        } catch { update(); }
+      } else update();
     };
     window.addEventListener('hashchange', syncPage);
     syncPage();
@@ -190,7 +212,7 @@ export default function App() {
         <div><a href="#admin"><LayoutDashboard size={16} />Back to dashboard</a>{signOutButton}</div>
       </aside>}
       {signOutError && <p className="staff-session-error" role="alert">{signOutError}</p>}
-      <main id="main-content" className={`customer-main customer-main-${page}`} tabIndex={-1}>
+      <main key={page} id="main-content" className={`customer-main customer-main-${page}`} tabIndex={-1}>
         {page === 'home' && <LandingPage />}
         {showScreening && <ScreeningPage readOnly={staffScreening} />}
         {page === 'customer' && <MarketplacePage key="customer" />}

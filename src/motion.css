@@ -1,0 +1,38 @@
+/* The portfolio's eased entrances, scaled down for a quiet, mobile-first app. */
+:root { --motion-ease: cubic-bezier(.2, .8, .2, 1); }
+.customer-main, .main-content { view-transition-name: page-content; animation: page-arrive 240ms var(--motion-ease) both; }
+@keyframes page-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes page-depart { to { opacity: 0; transform: translateY(-3px); } }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-old(page-content) { animation: page-depart 110ms ease-out both; }
+::view-transition-new(page-content) { animation: page-arrive 220ms var(--motion-ease) both; }
+::view-transition-group(page-content) { animation-duration: 220ms; }
+
+.market-detail, .market-tab-content, .market-quotes, .market-messaging, .project-quote-form, .market-membership { animation: page-arrive 220ms var(--motion-ease) both; }
+.market-list-item { animation: page-arrive 280ms var(--motion-ease) backwards; transition: border-color 180ms ease, box-shadow 200ms ease, transform 200ms var(--motion-ease); }
+.market-list-item:nth-of-type(2) { animation-delay: 25ms; }
+.market-list-item:nth-of-type(3) { animation-delay: 45ms; }
+.market-list-item:nth-of-type(4) { animation-delay: 65ms; }
+.partner-auth-stage { animation: page-arrive 220ms var(--motion-ease) both; }
+.partner-auth-stage > label, .partner-auth-stage > .membership-signup-price { animation: page-arrive 240ms var(--motion-ease) both; }
+.partner-auth-stage > label:nth-of-type(2) { animation-delay: 20ms; }
+.partner-auth-stage > label:nth-of-type(3) { animation-delay: 40ms; }
+.partner-auth-stage > label:nth-of-type(4) { animation-delay: 60ms; }
+.partner-auth-stage > .membership-signup-price { animation-delay: 75ms; }
+.market-removal-dialog { animation: page-arrive 180ms var(--motion-ease) both; }
+.market-success, .market-error { animation: page-arrive 180ms var(--motion-ease) both; }
+.proposal-service[open] > .proposal-line { animation: page-arrive 160ms var(--motion-ease) both; }
+.proposal-service > summary svg { transition: transform 180ms var(--motion-ease); }
+.btn, .market-icon-button, .market-logout-button, .market-text-button, .market-detail-tabs button, .minimal-mobile-nav a { transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 180ms ease, transform 150ms var(--motion-ease); }
+.market-workspace input, .market-workspace textarea, .market-workspace select, .market-login input { transition: border-color 150ms ease, box-shadow 180ms ease; }
+.btn:active, .market-icon-button:active, .market-logout-button:active { transform: scale(.985); }
+@media (hover: hover) and (pointer: fine) {
+  .market-list-item:hover { transform: translateY(-2px); box-shadow: 0 6px 18px #293f1409; }
+  .btn:hover, .market-logout-button:hover { transform: translateY(-1px); }
+  .market-logout-button:hover { background: #f059240a; border-color: #f0592440; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-main, .main-content, .market-detail, .market-tab-content, .market-quotes, .market-messaging, .project-quote-form, .market-membership, .market-list-item, .partner-auth-stage, .partner-auth-stage > label, .partner-auth-stage > .membership-signup-price, .market-removal-dialog, .market-success, .market-error, .proposal-service > .proposal-line { animation: none !important; }
+  .btn, .market-icon-button, .market-logout-button, .market-text-button, .market-detail-tabs button, .minimal-mobile-nav a, .market-list-item, .proposal-service > summary svg { transition: none !important; transform: none !important; }
+  ::view-transition-old(page-content), ::view-transition-new(page-content) { animation: none; }
+}

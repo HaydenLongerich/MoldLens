@@ -24,11 +24,6 @@ type FormLine = { key: string; description: string; category: string; unit: stri
 const newLine = (area?: ProjectArea): FormLine => ({ key: crypto.randomUUID(), description: '', category: 'assessment', unit: 'job', quantity: '1', unitPrice: '', areaIds: area ? [area.id] : [] });
 function quoteLines(current: Quote | undefined, areas: ProjectArea[]): FormLine[] {
   const saved = current?.lineItems;
-  // Expand only the unchanged generated demo template; preserve contractor-entered proposals.
-  if (current?.simulated && current.revision === 1 && saved?.length === 1 && saved[0].description === 'Whole-project assessment and written plan' && current.assessmentNotes === 'Example only: based on the submitted screening; extent and access remain unverified.' && areas.length > 1 && saved[0].quantity === 1 && saved[0].unit === 'job') {
-    const cents = Math.round(saved[0].unitPrice * 100);
-    return areas.map((area, index) => ({ ...newLine(area), description: `${area.label} assessment and written plan`, unitPrice: String((Math.floor(cents / areas.length) + (index < cents % areas.length ? 1 : 0)) / 100) }));
-  }
   if (saved?.length) return saved.map(line => ({ ...line, key: crypto.randomUUID(), quantity: String(line.quantity), unitPrice: String(line.unitPrice) }));
   return current ? [{ ...newLine(), description: current.scope, unitPrice: String(current.amount) }] : areas.map(area => newLine(area));
 }

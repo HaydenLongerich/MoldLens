@@ -24,11 +24,11 @@ Older screenings created before sharing consent was added remain private. Their 
 
 Each screening is one project, regardless of how many areas it contains. Structured `projectAreas` preserve area IDs, labels, and area-specific findings from the validated screening, while the overall description, summary points, and recommendations remain attached to that same project. Older records derive their areas from the saved labels.
 
-The interactive review supports filtering and expanding areas, reading the full screening summary, and marking areas reviewed. Review progress is kept in session storage for that company and project.
+Project review shows all screened areas and available findings as a flat readable list. There are no area dropdowns, filter chips or reviewed-state controls. The customer workspace has no demo control banner.
 
 Contractors submit a structured assessment offer, preliminary estimate, or confirmed quote, with `coveredAreaIds` containing every project area. The server validates itemized services, completed-assessment declarations for confirmed quotes, scope, moisture responsibility, exclusions, clearance, dates and payment terms. It calculates totals and optional Ontario HST. Updating keeps one proposal ID per company/project with immutable previous revisions. Assessment and estimate follow-up requests preserve the original offer and keep the work project open; choosing a confirmed work quote awards the entire project. See [research and field mapping](mold-quoting-research.md).
 
-The local sample-screening button creates one example project with Basement, Bathroom, and Attic. Sample proposals are indicative and labelled, with no invented completed site inspection. Legacy quotes need an itemized update before new selection; existing choices are preserved.
+The local sample-screening button creates one example project with Basement, Bathroom, and Attic. Sample projects start with no quotes. Quotes must be written and submitted from a contractor workspace; generated filler proposals have been retired. Legacy quotes need an itemized update before new selection; existing choices are preserved.
 
 The first screening opens automatically on entry, and changing an inbox filter opens its first matching screening. Explicit detail links are preserved. On mobile, **All screenings** returns to the list without immediately reopening a detail.
 
@@ -65,3 +65,7 @@ The server remains a localhost prototype. Production hosting, customer accounts/
 ## Ontario directory and notifications
 
 See [Ontario setup and operational notes](ontario-contractor-directory.md) for the Google Place ID database, live ratings and attributed reviews, optional company-provided Google profile links, postal matching, bounded province indexing, and the durable Resend invitation outbox. Emails use the private signup address and default to previews in company settings. Real Google and email credentials are not included. Targeted marketplace, screening integration and routing checks now total 21 tests.
+
+## Minimal interaction and motion
+
+Logout has a visible label. Route changes use a brief content fade and small vertical motion, with native view transitions where available and a CSS entrance fallback. Project lists, tabs, service editors and contractor signup use short eased entrances and restrained hover/press feedback inspired by the portfolio projects page. Reduced-motion settings disable these animations. The screening form no longer shows a Google contractor-search panel; postal matching remains on the backend.

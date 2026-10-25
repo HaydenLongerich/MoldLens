@@ -71,7 +71,6 @@ export const marketplace = {
   sampleReport: (area: string | string[], description: string, postalCode?: string) => request<MarketReport>('/reports', { areas: Array.isArray(area) ? area : [area], description, postalCode, autoShare: true }),
   broadcast: (id: string) => request<MarketReport>(`/reports/${id}/broadcast`, { consent: true }),
   quote: (id: string, values: ProjectQuoteInput) => request<MarketReport>(`/reports/${id}/quote`, values),
-  samples: (id: string) => request<MarketReport>(`/reports/${id}/sample-quotes`, {}),
   choose: (id: string, quoteId: string, revision?: number) => request<MarketReport>(`/reports/${id}/choose`, { quoteId, revision }),
   respond: (id: string, action: 'decline' | 'reopen' | 'archive' | 'remove' | 'restore') => request<MarketReport>(`/reports/${id}/response`, { action }),
   quoteAction: (id: string, quoteId: string, action: 'decline' | 'undo-decline' | 'archive' | 'restore', partner = false) => request<MarketReport>(`/reports/${id}/quotes/${quoteId}/action`, { action, role: partner ? 'partner' : 'customer' }),

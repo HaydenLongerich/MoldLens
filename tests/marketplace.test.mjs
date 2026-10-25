@@ -80,7 +80,7 @@ test('customer and company isolation, quote updates, selection and two-way messa
   assert.equal((await dispatch(app, { url: '/api/requests' })).status, 401);
 }));
 
-test('membership gates quoting, samples are idempotent, and invalid quotes are rejected', () => workspace(async app => {
+test('membership gates quoting, generated quotes are disabled, and invalid quotes are rejected', () => workspace(async app => {
   const { report, customer } = await sample(app);
   await post(app, `/reports/${report.id}/broadcast`, { consent: true }, customer);
   const moldtech = await demo(app, 'moldtech');
@@ -88,10 +88,10 @@ test('membership gates quoting, samples are idempotent, and invalid quotes are r
   await post(app, '/subscription', { status: 'paused' }, moldtech);
   assert.equal((await post(app, `/reports/${report.id}/quote`, quote, moldtech)).status, 403);
   const added = await post(app, `/reports/${report.id}/sample-quotes`, {}, customer);
-  assert.equal(added.json().quotes.length, 2);
-  assert.ok(added.json().quotes.every(item => item.simulated));
+  assert.equal(added.status, 410);
+  assert.equal((await get(app, '/reports', customer)).json()[0].quotes.length, 0);
   const again = await post(app, `/reports/${report.id}/sample-quotes`, {}, customer);
-  assert.equal(again.json().quotes.length, 2);
+  assert.equal(again.status, 410);
 }));
 
 test('company registration, credentials, logout and company data survive server restart', () => workspace(async (app, dataDirectory) => {

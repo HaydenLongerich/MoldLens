@@ -154,19 +154,7 @@
 .project-summary ul, .project-area ul { padding-left: 18px; font-size: 12px; line-height: 1.8; color: var(--muted); margin: 12px 0; }
 .project-areas-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 24px 0 14px; }
 .project-areas-heading h3 { font-size: 15px; font-weight: 550; margin: 0; }
-.project-areas-heading > span { font-size: 10px; color: var(--muted); }
-.project-area-filter { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 18px; }
-.project-area-filter button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 13px; border: 1px solid var(--border); border-radius: 24px; background: transparent; font-size: 11px; }
-.project-area-filter button[aria-pressed=true] { border-color: #f0592466; background: #f0592410; color: #a43d19; }
 .project-area-list { display: grid; gap: 10px; }
-.project-area { border: 1px solid var(--border); border-radius: 12px; }
-.project-area > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; min-height: 65px; }
-.project-area strong { display: block; font-size: 13px; font-weight: 550; margin-bottom: 4px; }
-.project-area small { font-size: 10px; }
-.project-area > div { padding: 0 16px 16px; }
-.project-area > div > p { font-size: 12px; color: var(--muted); }
-.project-reviewed { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 20px; min-height: 44px; padding: 9px 13px; background: transparent; font-size: 11px; margin-top: 12px; }
-.project-reviewed.is-reviewed { background: #a6b8a125; border-color: #a6b8a1; color: #496056; }
 .project-quote-action { margin-top: 22px; }
 .project-quote-coverage { margin-bottom: 24px; }
 .project-quote-coverage > span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
@@ -218,3 +206,11 @@
 .proposal-service[open] > summary svg { transform: rotate(180deg); }
 .proposal-service > .proposal-line { border: 0; margin: 0; border-radius: 0; }
 .proposal-service > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+.market-logout-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 15px; border: 1px solid var(--border); border-radius: 24px; background: transparent; font-size: 12px; white-space: nowrap; }
+.project-area-flat { padding: 14px 0; border-top: 1px solid var(--border); }
+.project-area-flat h4 { margin: 0; font-size: 13px; font-weight: 550; }
+.project-area-flat p, .project-area-flat ul, .project-screening-summary ul { font-size: 12px; line-height: 1.8; color: var(--muted); }
+.project-area-flat ul, .project-screening-summary ul { padding-left: 18px; margin-bottom: 0; }
+.project-screening-summary { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.project-screening-summary h3 { font-size: 13px; font-weight: 550; margin: 14px 0 8px; }

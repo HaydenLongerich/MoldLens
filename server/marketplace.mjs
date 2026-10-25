@@ -9,6 +9,7 @@ import { createInvitationSender, enqueueInvitations, invitationContent } from '.
 import { exampleCompanies, demoLocations } from './demo-companies.mjs';
 export { exampleCompanies };
 import { registerDemoCustomers } from './demo-customers.mjs';
+import { retireGeneratedSamples } from './generated-samples.mjs';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const now = () => new Date().toISOString();
@@ -66,6 +67,7 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
   // Persist the seed once; later starts never replace user data.
   await mutate(records => { for (const company of records.companies) if (!company.membership) { company.membership = { status: 'pending', amount: 100, currency: 'CAD', interval: 'month', simulated: true }; company.subscription = company.subscription === 'paused' ? 'paused' : 'pending'; company.trialEndsAt = null; } });
   await mutate(records => {
+    retireGeneratedSamples(records);
     for (const old of records.companies) if (old.example && ['aro', 'desa'].includes(old.id)) { old.retired = true; old.subscription = 'paused'; }
     for (const seed of exampleCompanies) {
       const current = records.companies.find(c => c.id === seed.id);
@@ -320,26 +322,12 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
         if (report.preliminarySelection?.quoteId === quote.id && report.preliminarySelection?.revision === quote.revision && input.proposalKind === 'assessment') throw new HttpError(409, 'The assessment visit was requested. Send a follow-up estimate or confirmed work quote instead.');
         (quote.revisions ||= []).push(proposalSnapshot(quote));
         Object.assign(quote, input, coverage, { revision: (quote.revision || 1) + 1, withdrawnAt: null, contractorArchivedAt: null, updatedAt: now() });
-      } else records.quotes.push({ id: randomUUID(), reference: `MLQ-${randomUUID().slice(0, 8).toUpperCase()}`, revision: 1, revisions: [], reportId: report.id, companyId: company.id, ...input, ...coverage, simulated: company.example, createdAt: now(), updatedAt: now() });
+      } else records.quotes.push({ id: randomUUID(), reference: `MLQ-${randomUUID().slice(0, 8).toUpperCase()}`, revision: 1, revisions: [], reportId: report.id, companyId: company.id, ...input, ...coverage, createdBy: 'contractor', simulated: company.example, createdAt: now(), updatedAt: now() });
       return view(records, report, company);
     }); res.status(201).json(report);
   }));
-  app.post('/api/marketplace/reports/:id/sample-quotes', route(async (req, res) => {
-    devOnly(req);
-    res.json(await mutate(records => {
-      const report = findReport(records, req.params.id); access(req, report, null);
-      if (report.status === 'draft') throw new HttpError(409, 'Share your report before adding sample quotes.');
-      if (report.selectedQuoteId) throw new HttpError(409, 'A quote has already been chosen.');
-      report.recipientIds.forEach((companyId, index) => {
-        const company = records.companies.find(item => item.id === companyId);
-        if (!company?.example || !active(company) || report.contractorResponses?.[companyId]?.declinedAt || records.quotes.some(item => item.reportId === report.id && item.companyId === companyId)) return;
-        const areaIds = projectAreas(report).map(area => area.id);
-        const validUntil = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-        const amount = [295, 350, 425][index % 3] * areaIds.length;
-        const proposal = validateProposal({ proposalKind: 'estimate', assessmentBasis: 'screening', assessmentNotes: 'Example only: based on the submitted screening; extent and access remain unverified.', scope: `Review all ${areaIds.length} project areas, inspect moisture conditions and provide a written plan.`, moisturePlan: 'Locate the source during the visit; correction work will be quoted separately.', exclusions: 'Remediation, reconstruction, hidden damage and laboratory testing are not included.', clearancePlan: 'Determine whether independent post-remediation clearance is needed after assessment.', availability: ['Next business day', 'Within 2 business days', 'This week'][index % 3], duration: 'One assessment visit', validUntil, paymentTerms: 'Example: confirm service and payment arrangements before booking.', depositAmount: 0, taxMode: 'none', lineItems: [{ description: 'Whole-project assessment and written plan', category: 'assessment', unit: 'job', quantity: 1, unitPrice: amount, areaIds }] }, areaIds);
-        records.quotes.push({ id: randomUUID(), reference: `MLQ-${randomUUID().slice(0, 8).toUpperCase()}`, revision: 1, revisions: [], reportId: report.id, companyId, quoteType: 'project', coveredAreaIds: areaIds, breakdown: [], ...proposal, simulated: true, createdAt: now(), updatedAt: now() });
-      }); return view(records, report);
-    }));
+  app.post('/api/marketplace/reports/:id/sample-quotes', route((req, _res) => {
+    devOnly(req); throw new HttpError(410, 'Automatic sample quotes are disabled. Contractors must send their own proposal.');
   }));
   app.post('/api/marketplace/reports/:id/choose', route(async (req, res) => {
     res.json(await mutate(records => {
