@@ -117,7 +117,7 @@ function RequestDetail({ request, onClose, onUpdate, onRefer }: { request: Inspe
   </div>;
 }
 
-export default function AdminPage({ onNavigate }: PageProps) {
+export default function AdminPage({ onNavigate, preview = false }: PageProps & { preview?: boolean }) {
   const [requests, setRequests] = useState<InspectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -131,7 +131,7 @@ export default function AdminPage({ onNavigate }: PageProps) {
   const loadRequests = async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
     setError('');
-    try { setRequests(await api.getRequests()); }
+    try { setRequests(preview ? [] : await api.getRequests()); }
     catch (cause) { setError(messageOf(cause)); }
     finally { setLoading(false); setRefreshing(false); }
   };

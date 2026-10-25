@@ -2,18 +2,18 @@
   width: 100%;
   max-width: 640px;
   margin: 0 auto;
-  color: var(--ink, #343a40);
+  color: var(--ink, #1f2b28);
 }
 
 .simple-intro { margin: 0 0 28px; text-align: center; }
 .simple-intro h1 { color: var(--heading); margin: 0 0 10px; font-size: clamp(29px, 4vw, 38px); letter-spacing: -1.3px; line-height: 1.2; font-weight: 700; }
 .simple-intro p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
-.simple-intake-form { padding: 30px; background: #fff; border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 7px 30px #343a4005; }
+.simple-intake-form { padding: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 7px 30px #4960560a; }
 .simple-intake-form fieldset { display: flex; flex-direction: column; gap: 22px; min-width: 0; padding: 0; margin: 0; border: 0; }
 .simple-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .simple-field>label { font-size: 14px; font-weight: 600; color: var(--ink); }
 .simple-optional { margin-left: 7px; font-size: 12px; font-weight: 400; color: var(--muted); }
-.simple-field input:not([type=file]), .simple-field textarea { width: 100%; border: 1px solid #ced4da; border-radius: 8px; padding: 12px 13px; background: #fff; color: var(--ink); font-size: 16px; line-height: 1.5; min-height: 48px; transition: border-color .15s, box-shadow .15s; }
+.simple-field input:not([type=file]), .simple-field textarea { width: 100%; border: 1px solid var(--border-strong); border-radius: 8px; padding: 12px 13px; background: var(--surface); color: var(--ink); font-size: 16px; line-height: 1.5; min-height: 48px; transition: border-color .15s, box-shadow .15s; }
 .simple-field input::placeholder, .simple-field textarea::placeholder { color: var(--muted); font-size: 14px; }
 .simple-field input[aria-invalid=true], .simple-field textarea[aria-invalid=true] { border-color: #b56554; }
 .simple-field textarea { resize: vertical; min-height: 104px; }
@@ -22,7 +22,7 @@
 .simple-postal input { max-width: 180px; text-transform: uppercase; }
 .simple-dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 21px 16px 19px; border: 1px dashed var(--accent-border); border-radius: 10px; background: var(--accent-subtle); color: var(--accent); transition: background .15s, border-color .15s; }
 .simple-dropzone.is-dragging { background: var(--accent-soft); border-color: var(--accent); }
-.simple-upload-button { min-height: 44px; margin-top: 7px; padding: 9px 17px; border: 1px solid var(--accent-border); border-radius: 7px; background: #fff; color: var(--accent-strong); font-size: 14px; font-weight: 600; }
+.simple-upload-button { min-height: 44px; margin-top: 7px; padding: 9px 17px; border: 1px solid var(--accent-border); border-radius: 7px; background: var(--surface); color: var(--accent-strong); font-size: 14px; font-weight: 600; }
 .simple-upload-button:hover { background: var(--accent-soft); border-color: var(--accent); }
 .simple-dropzone p { margin: 9px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); text-align: center; }
 .simple-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
@@ -45,14 +45,14 @@
 .simple-extra-details[open] summary>svg { transform: rotate(180deg); }
 .simple-optional-fields { display: grid; gap: 18px; padding-top: 18px; }
 .simple-consent-field { display: flex; flex-direction: column; gap: 7px; }
-.simple-consent { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; line-height: 1.65; color: #495057; }
-.simple-consent input { width: 17px; height: 17px; margin: 3px 0 0; accent-color: var(--accent, #d6420f); flex-shrink: 0; }
+.simple-consent { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; line-height: 1.65; color: var(--ink); }
+.simple-consent input { width: 17px; height: 17px; margin: 3px 0 0; accent-color: var(--accent, #496056); flex-shrink: 0; }
 .simple-field-error { color: #a7483b; font-size: 13px; line-height: 1.55; }
 .simple-submit-error { background: #fff3ef; border: 1px solid #edcfc4; padding: 13px 14px; border-radius: 8px; color: #994a3a; font-size: 14px; line-height: 1.6; }
 .simple-inspection .simple-submit { width: 100%; min-height: 50px; font-size: 15px; border-radius: 8px; font-weight: 600; }
 .simple-photo-note { font-size: 12px; line-height: 1.7; text-align: center; color: var(--muted); margin: 16px 9px 0; }
 .simple-demo-note { text-align: center; font-size: 12px; line-height: 1.7; color: var(--muted); margin: 20px 5px 0; }
-.simple-success { max-width: 510px; text-align: center; padding: 44px 30px; background: #fff; border: 1px solid var(--border); border-radius: 18px; }
+.simple-success { max-width: 510px; text-align: center; padding: 44px 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
 .simple-success-icon { display: grid; place-items: center; width: 64px; height: 64px; background: var(--accent-soft); border-radius: 50%; color: var(--accent); margin: 0 auto 23px; }
 .simple-success h2 { color: var(--heading); font-size: 29px; letter-spacing: -.8px; margin: 0 0 12px; outline: 0; }
 .simple-success>p:not(.simple-demo-note) { font-size: 15px; line-height: 1.75; color: var(--muted); margin: 0 auto; max-width: 340px; }

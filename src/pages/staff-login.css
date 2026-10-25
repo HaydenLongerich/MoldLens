@@ -3,7 +3,7 @@
 .staff-login-icon { display: grid; place-items: center; width: 54px; height: 54px; margin: 0 auto 20px; color: var(--accent); background: var(--accent-soft); border-radius: 14px; }
 .staff-login h1 { color: var(--heading); font-size: 29px; letter-spacing: -.8px; line-height: 1.25; margin: 0 0 11px; }
 .staff-login-heading p, .staff-login-message p { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 0; }
-.staff-login-card { padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 7px 30px #343a4005; }
+.staff-login-card { padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 7px 30px #4960560a; }
 .staff-login-card fieldset { display: flex; flex-direction: column; gap: 20px; min-width: 0; padding: 0; margin: 0; border: 0; }
 .staff-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .staff-field label { color: var(--ink); font-size: 14px; font-weight: 600; }

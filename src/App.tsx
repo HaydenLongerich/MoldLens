@@ -1,28 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, FilePlus2, LayoutDashboard, LogOut, Menu, ShieldCheck, UsersRound } from 'lucide-react';
-import InspectionPage from './pages/InspectionPage';
-import RequestsPage from './pages/RequestsPage';
+import { Aperture, ArrowLeft, Building2, ClipboardList, FilePlus2, LayoutDashboard, LogOut, Menu, ShieldCheck, UsersRound } from 'lucide-react';
+import LandingPage from './pages/LandingPage';
 import AdminPage from './pages/AdminPage';
-import ContractorsPage from './pages/ContractorsPage';
+import MarketplacePage from './pages/MarketplacePage';
 import StaffLoginPage from './pages/StaffLoginPage';
 import ScreeningPage from './pages/ScreeningPage';
 import { AUTH_STORAGE_SIGNAL, getSession, isOfflinePreview, signalAuthChange, signOut, type AuthSession } from './lib/auth';
 import type { Page } from './lib/types';
+import { localTesting } from './lib/testing';
 import './customer.css';
 
 const pageLabels: Record<Page, string> = {
-  inspection: 'Request a review', screening: 'Start a screening', requests: 'My requests',
-  admin: 'Client dashboard', contractors: 'Find a specialist', login: 'Staff sign in',
+  home: 'A clearer picture of your home', inspection: 'Request a review', screening: 'Start a screening', requests: 'My requests',
+  admin: 'Client dashboard', contractors: 'Contractors', login: 'Staff sign in', customer: 'My screenings', partner: 'Customer screenings',
 };
 
 function readPage(): Page {
   const value = window.location.hash.slice(1).split('?')[0];
-  return Object.hasOwn(pageLabels, value) ? value as Page : 'inspection';
+  if (value === 'requests') return 'customer';
+  if (value === 'inspection') return 'screening';
+  if (value === 'contractors') return 'partner';
+  return Object.hasOwn(pageLabels, value) ? value as Page : 'home';
 }
 
 function Brand() {
-  return <a href="#inspection" className="brand" aria-label="MoldLens home">
-    <span className="brand-icon"><ShieldCheck size={29} strokeWidth={1.65} /></span>
+  return <a href="#home" className="brand" aria-label="MoldLens home">
+    <span className="brand-icon"><Aperture size={30} strokeWidth={1.65} aria-hidden="true" /></span>
     <span className="brand-wordmark">Mold<span>Lens</span></span>
   </a>;
 }
@@ -42,6 +45,7 @@ export default function App() {
   const signingOut = useRef(false);
 
   const navigate = useCallback((next: Page) => {
+    next = next === 'requests' ? 'customer' : next === 'inspection' ? 'screening' : next;
     window.location.hash = next;
     setPage(next);
     setMenuOpen(false);
@@ -103,24 +107,29 @@ export default function App() {
 
   useEffect(() => {
     const syncPage = () => {
+      const [route, query] = window.location.hash.slice(1).split('?');
+      const alias = route === 'requests' ? 'customer' : route === 'inspection' ? 'screening' : route === 'contractors' ? 'partner' : null;
+      if (alias) window.history.replaceState(null, '', `#${alias}${query ? `?${query}` : ''}`);
       setPage(readPage());
       setRouteHash(window.location.hash);
       setMenuOpen(false);
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', syncPage);
+    syncPage();
     return () => window.removeEventListener('hashchange', syncPage);
   }, []);
 
   const isStaff = !isOfflinePreview && !!session?.user;
-  const showAdmin = page === 'admin' && isStaff && !authError;
+  const dashboardPreview = localTesting && page === 'admin' && new URLSearchParams(routeHash.split('?')[1] || '').get('preview') === 'testing';
+  const showAdmin = page === 'admin' && (dashboardPreview || (isStaff && !authError));
   const staffScreening = page === 'screening' && new URLSearchParams(routeHash.split('?')[1] || '').get('view') === 'staff';
   const staffRoute = page === 'admin' || page === 'login' || staffScreening;
   const showScreening = page === 'screening' && (!staffScreening || (isStaff && !authError));
 
   useEffect(() => {
-    document.title = `${staffRoute && (!isStaff || authError) ? 'Staff sign in' : staffScreening ? 'Screening details' : pageLabels[page]} · MoldLens`;
-  }, [page, staffRoute, staffScreening, isStaff, authError]);
+    document.title = `${dashboardPreview ? 'Test dashboard' : staffRoute && (!isStaff || authError) ? 'Staff sign in' : staffScreening ? 'Screening details' : pageLabels[page]} · MoldLens`;
+  }, [page, staffRoute, staffScreening, isStaff, authError, dashboardPreview]);
 
   useEffect(() => { if (page === 'login' && isStaff) navigate('admin'); }, [isStaff, navigate, page]);
 
@@ -171,7 +180,9 @@ export default function App() {
       <header className="customer-header">
         <Brand />
         <nav aria-label="Customer navigation">
-          <a href="#requests" aria-current={page === 'requests' ? 'page' : undefined}>My requests</a>
+          <a href="#screening" aria-current={page === 'screening' ? 'page' : undefined}>Screen</a>
+          <a href="#customer" aria-current={page === 'customer' ? 'page' : undefined}>My screenings</a>
+          <a href="#partner" aria-current={page === 'partner' ? 'page' : undefined}>Contractors</a>
         </nav>
       </header>
       {isStaff && <aside className="staff-viewbar" aria-label="Staff controls">
@@ -180,19 +191,17 @@ export default function App() {
       </aside>}
       {signOutError && <p className="staff-session-error" role="alert">{signOutError}</p>}
       <main id="main-content" className={`customer-main customer-main-${page}`} tabIndex={-1}>
-        {page === 'inspection' && <InspectionPage onNavigate={navigate} />}
+        {page === 'home' && <LandingPage />}
         {showScreening && <ScreeningPage readOnly={staffScreening} />}
-        {page === 'requests' && <RequestsPage onNavigate={navigate} />}
-        {page === 'contractors' && <ContractorsPage onNavigate={navigate} />}
+        {page === 'customer' && <MarketplacePage key="customer" />}
+        {page === 'partner' && <MarketplacePage key="partner" partner />}
         {staffRoute && !showScreening && <StaffLoginPage session={session} loading={authLoading} error={authError} notice={authNotice} onRetry={() => void refreshSession(true)} onSignedIn={signedIn} />}
       </main>
-      <footer className="customer-footer">
-        <span>MoldLens · Ottawa</span>
-        <nav aria-label="More options">
-          {page === 'contractors' ? <a href="#inspection">Request a review</a> : <a href="#contractors">Find a specialist</a>}
-          {!isStaff && <a href="#login" aria-current={staffRoute ? 'page' : undefined}>Staff sign in</a>}
-        </nav>
-      </footer>
+      {page !== 'home' && <nav className="minimal-mobile-nav" aria-label="App navigation">
+        <a href="#screening" aria-current={page === 'screening' ? 'page' : undefined}><ShieldCheck size={20} />Screen</a>
+        <a href="#customer" aria-current={page === 'customer' ? 'page' : undefined}><ClipboardList size={20} />My screenings</a>
+        <a href="#partner" aria-current={page === 'partner' ? 'page' : undefined}><Building2 size={20} />Contractors</a>
+      </nav>}
     </div>;
   }
 
@@ -203,7 +212,7 @@ export default function App() {
       <Brand />
       <nav aria-label="Team navigation">
         <p className="nav-section-label">TEAM WORKSPACE</p>
-        <a href="#admin" className="nav-item active" aria-current="page"><LayoutDashboard size={19} />Client dashboard</a>
+        <a href={dashboardPreview ? '#admin?preview=testing' : '#admin'} className="nav-item active" aria-current="page"><LayoutDashboard size={19} />Client dashboard</a>
         <a href="#contractors" className="nav-item"><UsersRound size={19} />Find a specialist</a>
         <a href="#inspection" className="nav-item"><FilePlus2 size={19} />Customer form</a>
         <a href="#screening" className="nav-item"><ShieldCheck size={19} />Start a screening</a>
@@ -217,13 +226,13 @@ export default function App() {
           <span className="breadcrumb-current">Client dashboard</span>
         </div>
         <div className="staff-topbar-controls">
-          <span className="staff-account-email" title={session?.user?.email}>{session?.user?.email}</span>
+          <span className="staff-account-email" title={dashboardPreview ? undefined : session?.user?.email}>{dashboardPreview ? 'Testing preview · no live data' : session?.user?.email}</span>
           <a className="staff-customer-link" href="#inspection"><ArrowLeft size={15} />View customer page</a>
-          {signOutButton}
+          {dashboardPreview ? <a className="staff-signout" href="#screening">Exit preview</a> : signOutButton}
         </div>
       </header>
       {signOutError && <p className="staff-session-error" role="alert">{signOutError}</p>}
-      <main id="main-content" className="main-content" tabIndex={-1}><AdminPage onNavigate={navigate} /></main>
+      <main id="main-content" className="main-content" tabIndex={-1}><AdminPage key={dashboardPreview ? 'preview' : 'staff'} onNavigate={navigate} preview={dashboardPreview} /></main>
       <footer className="app-footer"><span>MoldLens · Team workspace</span><span>Ottawa, ON</span></footer>
     </div>
   </div>;

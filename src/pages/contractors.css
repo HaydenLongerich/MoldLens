@@ -2,24 +2,24 @@
 .contractors-page-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 27px; }
 .contractors-page-heading .page-heading { margin: 8px 0 10px; }
 .contractors-page-heading .page-description { margin: 0; max-width: 660px; }
-.contractors-location { display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid var(--border); border-radius: 30px; background: white; padding: 10px 14px; font-size: 12px; color: var(--muted); }
+.contractors-location { display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid var(--border); border-radius: 30px; background: var(--surface); padding: 10px 14px; font-size: 12px; color: var(--muted); }
 .contractors-location-dot { height: 6px; width: 6px; margin-left: 6px; background: var(--accent); border-radius: 50%; }
 .contractor-intro { position: relative; overflow: hidden; display: flex; align-items: center; gap: 22px; background: var(--accent-subtle); border: 1px solid var(--accent-border); border-radius: 17px; padding: 29px 32px; margin-bottom: 30px; }
 .contractor-intro-icon { width: 65px; height: 65px; flex: 0 0 65px; border: 1px solid var(--accent-border); background: var(--surface); border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
 .contractor-mini-label { font-size: 10px; font-weight: 750; letter-spacing: 1.35px; color: var(--accent-strong); }
-.contractor-intro h2 { font-family: Manrope, sans-serif; font-size: 19px; line-height: 1.45; font-weight: 650; margin: 5px 0 6px; letter-spacing: -.5px; color: var(--ink); }
+.contractor-intro h2 { font-family: 'Mona Sans', sans-serif; font-size: 19px; line-height: 1.45; font-weight: 650; margin: 5px 0 6px; letter-spacing: -.5px; color: var(--ink); }
 .contractor-intro p { max-width: 630px; margin: 0; font-size: 12px; line-height: 1.75; color: var(--muted); }
 .contractor-intro-mark { align-self: stretch; width: 160px; min-width: 100px; margin-left: auto; display: grid; place-items: center; position: relative; color: var(--accent); }
 .contractor-intro-mark span { position: absolute; width: 78px; height: 78px; border: 1px solid var(--accent-border); border-radius: 50%; }
 .contractor-intro-mark span:nth-child(2) { width: 125px; height: 125px; border-style: dashed; }
 .contractor-intro-mark span:nth-child(3) { width: 175px; height: 175px; opacity: .5; }
 .contractor-search-row { display: flex; gap: 14px; }
-.contractor-search { display: flex; flex: 1; min-width: 0; align-items: center; gap: 11px; border: 1px solid var(--border); border-radius: 9px; height: 47px; padding: 0 15px; color: #818991; background: #fff; }
+.contractor-search { display: flex; flex: 1; min-width: 0; align-items: center; gap: 11px; border: 1px solid var(--border); border-radius: 9px; height: 47px; padding: 0 15px; color: var(--muted); background: var(--surface); }
 .contractor-search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .contractor-search input { flex: 1; width: 100%; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 12px; }
-.contractor-search input::placeholder { color: #8b939b; }
+.contractor-search input::placeholder { color: var(--muted); }
 .contractor-search button { display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
-.contractor-saved-filter { display: flex; align-items: center; gap: 8px; padding: 0 17px; border: 1px solid var(--border); border-radius: 9px; background: #fff; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
+.contractor-saved-filter { display: flex; align-items: center; gap: 8px; padding: 0 17px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; }
 .contractor-saved-filter > span { background: var(--bg); border-radius: 5px; padding: 2px 6px; font-size: 10px; }
 .contractor-saved-filter.is-active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .contractor-filter-row { padding: 17px 0; border-bottom: 1px solid var(--border); }
@@ -32,36 +32,36 @@
 .contractor-results-row > p strong { font-size: 12px; color: var(--ink); font-weight: 650; margin-right: 4px; }
 .contractor-sort-actions { display: flex; align-items: center; gap: 16px; }
 .contractor-sort { display: flex; align-items: center; gap: 6px; color: var(--muted); }
-.contractor-sort select { font: inherit; font-size: 11px; border: 0; appearance: none; background: transparent; color: #495057; padding: 7px 3px; cursor: pointer; }
-.contractor-view-toggle { display: flex; gap: 3px; border: 1px solid var(--border); background: #fff; padding: 3px; border-radius: 7px; }
-.contractor-view-toggle button { display: grid; place-items: center; width: 29px; height: 26px; border-radius: 4px; border: 0; color: #8b939b; background: transparent; cursor: pointer; }
+.contractor-sort select { font: inherit; font-size: 11px; border: 0; appearance: none; background: transparent; color: var(--ink); padding: 7px 3px; cursor: pointer; }
+.contractor-view-toggle { display: flex; gap: 3px; border: 1px solid var(--border); background: var(--surface); padding: 3px; border-radius: 7px; }
+.contractor-view-toggle button { display: grid; place-items: center; width: 29px; height: 26px; border-radius: 4px; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
 .contractor-view-toggle button.is-active { background: var(--accent-soft); color: var(--accent-strong); }
 .contractor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.contractor-card { position: relative; display: flex; border: 1px solid var(--border); border-radius: 13px; background: white; transition: box-shadow .2s, transform .2s; overflow: hidden; }
-.contractor-card:hover { box-shadow: 0 6px 22px #343a400b; transform: translateY(-2px); }
+.contractor-card { position: relative; display: flex; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); transition: box-shadow .2s, transform .2s; overflow: hidden; }
+.contractor-card:hover { box-shadow: 0 6px 22px #49605615; transform: translateY(-2px); }
 .contractor-card-featured { border-color: var(--accent-border); }
 .contractor-featured-label { position: absolute; left: 0; top: 0; width: 100%; height: 26px; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--accent-soft); color: var(--accent-strong); font-size: 8px; font-weight: 700; letter-spacing: 1.2px; }
 .contractor-card-content { width: 100%; display: flex; flex-direction: column; padding: 29px 21px 14px; }
 .contractor-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 9px; margin-bottom: 18px; }
-.contractor-logo { width: 50px; height: 50px; flex: 0 0 50px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; font-family: Manrope, sans-serif; font-size: 18px; font-weight: 750; letter-spacing: -1px; background: #f0f2f4; color: #495057; }
+.contractor-logo { width: 50px; height: 50px; flex: 0 0 50px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; font-family: 'Mona Sans', sans-serif; font-size: 18px; font-weight: 750; letter-spacing: -1px; background: #f0f2f4; color: var(--ink); }
 .contractor-logo-forest { color: #fff; background: var(--accent); }
 .contractor-logo-terracotta { color: #ac6149; background: #f8ebe5; }
-.contractor-logo-sage { color: #59636c; background: #eef0f2; }
+.contractor-logo-sage { color: var(--muted); background: #eef0f2; }
 .contractor-logo-blue { color: #5d7893; background: #eaf0f6; }
 .contractor-logo-sand { color: #91744f; background: #f6f0e5; }
 .contractor-logo-small { width: 34px; height: 34px; flex-basis: 34px; border-radius: 9px; font-size: 12px; }
-.contractor-icon-btn { display: grid; place-items: center; height: 30px; width: 30px; border: 0; border-radius: 7px; background: transparent; color: #7e8790; cursor: pointer; }
+.contractor-icon-btn { display: grid; place-items: center; height: 30px; width: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
 .contractor-icon-btn:hover, .contractor-icon-btn.is-saved { color: var(--accent); background: var(--accent-soft); }
-.contractor-card-title h2 { font-family: Manrope, sans-serif; color: var(--ink); font-size: 16px; letter-spacing: -.4px; font-weight: 750; line-height: 1.45; margin: 0 0 4px; }
+.contractor-card-title h2 { font-family: 'Mona Sans', sans-serif; color: var(--ink); font-size: 16px; letter-spacing: -.4px; font-weight: 750; line-height: 1.45; margin: 0 0 4px; }
 .contractor-card-title p { font-size: 11px; line-height: 1.6; color: var(--muted); margin: 0; }
 .contractor-area { display: flex; align-items: center; gap: 5px; font-size: 10px; line-height: 1.6; color: var(--muted); margin: 15px 0 13px; }
 .contractor-area svg { flex: 0 0 14px; }
 .contractor-service-tags { display: flex; gap: 5px; flex-wrap: wrap; }
-.contractor-service-tags > span { font-size: 9px; line-height: 1.5; color: #59636c; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; }
+.contractor-service-tags > span { font-size: 9px; line-height: 1.5; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; }
 .contractor-price { border-top: 1px solid var(--border); padding-top: 18px; margin-top: 20px; }
 .contractor-price > span { display: block; color: var(--muted); font-size: 8px; letter-spacing: 1.2px; font-weight: 600; }
-.contractor-price > strong { display: flex; gap: 9px; align-items: center; margin: 5px 0; font-family: Manrope, sans-serif; font-size: 20px; letter-spacing: -.6px; font-weight: 650; color: var(--ink); }
-.contractor-no-obligation { font-family: 'DM Sans', sans-serif; font-size: 8px; letter-spacing: 0; color: var(--accent-strong); background: var(--accent-soft); border-radius: 4px; padding: 4px 6px; font-weight: 500; }
+.contractor-price > strong { display: flex; gap: 9px; align-items: center; margin: 5px 0; font-family: 'Mona Sans', sans-serif; font-size: 20px; letter-spacing: -.6px; font-weight: 650; color: var(--ink); }
+.contractor-no-obligation { font-family: 'Mona Sans', sans-serif; font-size: 8px; letter-spacing: 0; color: var(--accent-strong); background: var(--accent-soft); border-radius: 4px; padding: 4px 6px; font-weight: 500; }
 .contractor-price p { margin: 0; font-size: 9px; color: var(--muted); line-height: 1.7; min-height: 31px; }
 .contractor-availability { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; padding: 13px 0 18px; margin-top: auto; }
 .contractor-card-actions { display: flex; align-items: stretch; gap: 8px; }
@@ -76,14 +76,14 @@
 .contractor-card-footer > a:hover { color: var(--accent); text-decoration: underline; }
 .contractor-help-card { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; background: var(--bg); border: 1px solid var(--border); padding: 30px 26px; border-radius: 13px; }
 .contractor-help-icon { display: grid; place-items: center; color: var(--accent); height: 58px; width: 58px; border: 1px solid var(--accent-border); border-radius: 50%; margin-bottom: 23px; }
-.contractor-help-card h2 { font-family: Manrope, sans-serif; font-size: 24px; line-height: 1.4; letter-spacing: -.8px; color: var(--ink); font-weight: 650; margin: 11px 0 13px; }
+.contractor-help-card h2 { font-family: 'Mona Sans', sans-serif; font-size: 24px; line-height: 1.4; letter-spacing: -.8px; color: var(--ink); font-weight: 650; margin: 11px 0 13px; }
 .contractor-help-card p { font-size: 11px; line-height: 1.9; color: var(--muted); margin: 0 0 25px; }
 .contractor-help-card .btn { font-size: 11px; padding: 11px 13px; display: flex; gap: 9px; align-items: center; background: var(--surface); }
 .contractor-help-note { display: flex; gap: 4px; align-items: center; font-size: 9px; margin: 15px 0 0; color: var(--muted); }
 .contractor-directory-note { display: flex; gap: 10px; align-items: flex-start; margin-top: 24px; color: var(--muted); }
 .contractor-directory-note svg { flex: 0 0 17px; margin-top: 2px; }
 .contractor-directory-note p { max-width: 830px; margin: 0; font-size: 10px; line-height: 1.8; }
-.contractor-directory-note strong { font-weight: 500; color: #495057; }
+.contractor-directory-note strong { font-weight: 500; color: var(--ink); }
 .contractor-list { grid-template-columns: 1fr; }
 .contractor-list .contractor-card-content { display: grid; grid-template-columns: 62px 1.3fr 1fr 1fr; align-items: center; gap: 8px 16px; padding: 24px; }
 .contractor-list .contractor-featured-label { width: auto; padding: 0 12px; border-radius: 0 0 6px 0; height: 20px; font-size: 7px; }
@@ -101,12 +101,12 @@
 .contractor-empty > svg { color: var(--accent); }
 .contractor-empty h3 { color: var(--ink); font-size: 18px; }
 .contractor-empty p { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
-.contractor-skeleton { display: flex; flex-direction: column; padding: 30px 22px; height: 340px; gap: 24px; background: #fff; border: 1px solid var(--border); border-radius: 13px; }
+.contractor-skeleton { display: flex; flex-direction: column; padding: 30px 22px; height: 340px; gap: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 13px; }
 .contractor-skeleton span { background: linear-gradient(90deg, #edf0f2, #f8f9fa, #edf0f2); background-size: 200% 100%; height: 18px; border-radius: 5px; animation: contractor-shimmer 1.5s infinite; }
 .contractor-skeleton span:first-child { height: 50px; width: 50px; }
 .contractor-skeleton span:last-child { margin-top: auto; height: 40px; }
 @keyframes contractor-shimmer { to { background-position: -200% 0; } }
-.contractor-compare-bar { position: sticky; bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 16px 22px; margin: 22px auto 0; border: 1px solid var(--accent-border); border-radius: 13px; background: #fff8f4f5; backdrop-filter: blur(14px); box-shadow: 0 6px 30px #343a4021; z-index: 8; }
+.contractor-compare-bar { position: sticky; bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 16px 22px; margin: 22px auto 0; border: 1px solid var(--accent-border); border-radius: 13px; background: #fff8f4f5; backdrop-filter: blur(14px); box-shadow: 0 6px 30px #49605620; z-index: 8; }
 .contractor-compare-preview { display: flex; align-items: center; gap: 15px; color: var(--ink); }
 .contractor-compare-preview strong { display: block; font-size: 12px; font-weight: 650; }
 .contractor-compare-preview span { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
@@ -117,15 +117,15 @@
 .contractor-clear-compare { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
 .contractor-compare-controls .btn { display: flex; align-items: center; gap: 9px; font-size: 12px; }
 .contractor-compare-controls .btn:disabled { opacity: .45; cursor: not-allowed; }
-.contractor-dialog { border: 1px solid var(--border); border-radius: 18px; padding: 0; max-width: 580px; width: calc(100% - 32px); max-height: 88vh; color: var(--ink); box-shadow: 0 20px 100px #1736383b; }
-.contractor-dialog::backdrop { background: #17363860; backdrop-filter: blur(4px); }
+.contractor-dialog { border: 1px solid var(--border); border-radius: 18px; padding: 0; max-width: 580px; width: calc(100% - 32px); max-height: 88vh; color: var(--ink); box-shadow: 0 20px 100px #1f2b283b; }
+.contractor-dialog::backdrop { background: #1f2b2860; backdrop-filter: blur(4px); }
 .contractor-dialog-inner { padding: 29px; }
 .contractor-dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
-.contractor-dialog-heading h2 { font-family: Manrope, sans-serif; font-size: 20px; letter-spacing: -.7px; margin: 0; }
+.contractor-dialog-heading h2 { font-family: 'Mona Sans', sans-serif; font-size: 20px; letter-spacing: -.7px; margin: 0; }
 .contractor-profile-head { display: flex; align-items: center; gap: 15px; padding-top: 24px; }
-.contractor-profile-head h3 { font-family: Manrope, sans-serif; font-size: 18px; margin: 0 0 5px; }
+.contractor-profile-head h3 { font-family: 'Mona Sans', sans-serif; font-size: 18px; margin: 0 0 5px; }
 .contractor-profile-head p { color: var(--muted); font-size: 12px; margin: 0; }
-.contractor-profile-description { font-size: 13px; line-height: 1.9; color: #59636c; margin: 22px 0; }
+.contractor-profile-description { font-size: 13px; line-height: 1.9; color: var(--muted); margin: 22px 0; }
 .contractor-profile-facts { display: grid; gap: 18px; padding: 22px; border-radius: 10px; background: var(--bg); margin-bottom: 20px; }
 .contractor-profile-facts > div { display: flex; align-items: flex-start; gap: 12px; color: var(--accent); }
 .contractor-profile-facts span { display: block; font-size: 10px; color: var(--muted); margin-bottom: 3px; }
@@ -141,10 +141,10 @@
 .contractor-comparison-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
 .contractor-comparison-table thead th { background: var(--bg); padding: 18px 14px; min-width: 170px; vertical-align: bottom; font-weight: 500; }
 .contractor-comparison-table thead th:first-child { min-width: 100px; font-size: 11px; color: var(--muted); }
-.contractor-comparison-table thead strong { display: block; margin-top: 9px; font-family: Manrope, sans-serif; font-weight: 600; font-size: 13px; }
+.contractor-comparison-table thead strong { display: block; margin-top: 9px; font-family: 'Mona Sans', sans-serif; font-weight: 600; font-size: 13px; }
 .contractor-comparison-table tbody th { font-weight: 500; font-size: 11px; color: var(--muted); }
 .contractor-comparison-table td, .contractor-comparison-table tbody th { padding: 18px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.7; }
-.contractor-comparison-table td { color: #59636c; font-size: 11px; }
+.contractor-comparison-table td { color: var(--muted); font-size: 11px; }
 .contractor-comparison-table td strong { color: var(--ink); font-size: 14px; }
 .contractor-comparison-table td p { font-size: 10px; color: var(--muted); margin: 5px 0 0; }
 .contractor-comparison-table ul { display: flex; flex-direction: column; gap: 6px; padding: 0; margin: 0; list-style: none; }

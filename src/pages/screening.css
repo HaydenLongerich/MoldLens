@@ -29,7 +29,7 @@
 .screening-form legend, .screening-field > label { margin-bottom: 9px; color: var(--ink); font-size: 14px; font-weight: 600; }
 .screening-field { display: flex; flex-direction: column; min-width: 0; }
 .screening-field > label > span { margin-left: 5px; font-size: 12px; font-weight: 400; color: var(--muted); }
-.screening-field input, .screening-field textarea, .screening-field select { width: 100%; min-height: 48px; border: 1px solid var(--border-strong); border-radius: 8px; background: #fff; padding: 11px 12px; font: inherit; font-size: 16px; line-height: 1.5; color: var(--ink); }
+.screening-field input, .screening-field textarea, .screening-field select { width: 100%; min-height: 48px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); padding: 11px 12px; font: inherit; font-size: 16px; line-height: 1.5; color: var(--ink); }
 .screening-field input:focus-visible, .screening-field textarea:focus-visible, .screening-field select:focus-visible { outline: 3px solid var(--focus-ring); border-color: var(--accent); }
 .screening-field textarea { min-height: 98px; resize: vertical; }
 .screening-field textarea::placeholder { color: var(--muted); font-size: 14px; }
@@ -52,12 +52,12 @@
 .screening-center { text-align: center; }
 .screening-dropzone { display: flex; flex-direction: column; align-items: center; gap: 11px; padding: 24px 16px 18px; border: 1px dashed var(--accent-border); border-radius: 10px; background: var(--accent-subtle); color: var(--accent); }
 .screening-dropzone.is-dragging { background: var(--accent-soft); border-color: var(--accent); }
-.screening-dropzone .btn { min-height: 44px; color: var(--accent-strong); background: #fff; border-color: var(--accent-border); }
+.screening-dropzone .btn { min-height: 44px; color: var(--accent-strong); background: var(--surface); border-color: var(--accent-border); }
 .screening-dropzone p { margin: 0; font-size: 12px; text-align: center; color: var(--muted); }
 .screening-options { display: flex; gap: 8px; flex-wrap: wrap; }
 .screening-choice { position: relative; display: inline-flex; cursor: pointer; }
 .screening-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.screening-choice > span { display: flex; align-items: center; min-height: 44px; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: #fff; color: var(--muted); font-size: 13px; line-height: 1.4; transition: border-color .15s, background .15s; }
+.screening-choice > span { display: flex; align-items: center; min-height: 44px; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--muted); font-size: 13px; line-height: 1.4; transition: border-color .15s, background .15s; }
 .screening-choice input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent); }
 .screening-choice input:focus-visible + span { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .screening-choice input:disabled + span { opacity: .6; cursor: default; }
@@ -67,7 +67,7 @@
 .screening-text-button { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; gap: 5px; padding: 5px 7px; border: 0; border-radius: 5px; background: transparent; font: inherit; font-size: 12px; color: var(--accent-strong); cursor: pointer; }
 .screening-text-button:hover:not(:disabled) { background: var(--accent-soft); }
 .screening-upload-list { display: grid; gap: 10px; }
-.screening-upload { min-width: 0; padding: 13px 14px; border: 1px solid var(--border); border-radius: 9px; background: #fff; }
+.screening-upload { min-width: 0; padding: 13px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
 .screening-upload-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; }
 .screening-upload-heading strong { min-width: 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 600; }
 .screening-upload-heading > span { flex-shrink: 0; font-size: 11px; color: var(--muted); }
@@ -104,7 +104,7 @@
 .screening-phases li[data-state=current] { color: var(--accent-strong); font-weight: 600; }
 .screening-phases li[data-state=current] > span { background: var(--accent-soft); border-color: var(--accent); }
 .screening-loading { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
-.screening-history { margin: 28px 0 0; padding: 24px; border: 1px solid var(--border); background: #fff; border-radius: 6px; }
+.screening-history { margin: 28px 0 0; padding: 24px; border: 1px solid var(--border); background: var(--surface); border-radius: 6px; }
 .screening-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .screening-section-heading h2 { margin: 0; font-size: 18px; }
 .screening-history-list { display: grid; margin-top: 15px; }
@@ -182,7 +182,7 @@
 .screening-multi-hint { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 400; }
 
 /* Screening report as a formal document: one sheet, key/value summary, ruled tables. */
-.doc { --doc-rule: #dfe4e6; --doc-head-bg: #f2f5f5; display: block; padding: 40px 44px 32px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--ink); font-size: 14px; line-height: 1.55; }
+.doc { --doc-rule: #dfe4e6; --doc-head-bg: #f2f5f5; display: block; padding: 40px 44px 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 14px; line-height: 1.55; }
 .doc-head { padding-bottom: 6px; }
 .doc-brandrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; margin-bottom: 22px; border-bottom: 2px solid var(--heading); color: var(--muted); font-size: 12px; letter-spacing: .2px; }
 .doc-brandrow strong { color: var(--heading); font-weight: 700; }
@@ -265,7 +265,7 @@
 /* Section headers: teal icon ring and coloured title over a divider rule. */
 .doc { --doc-teal: #1d6a6c; --doc-teal-soft: #d5e7e6; --doc-head-bg: #eef6f5; }
 .screening-shell .doc h2.doc-heading { display: flex; align-items: center; gap: 11px; margin: 0 0 14px; padding-bottom: 9px; border-bottom: 2px solid var(--doc-teal-soft); color: var(--doc-teal); font-size: 18px; }
-.doc-heading-icon { display: inline-grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border: 1.75px solid var(--doc-teal); border-radius: 50%; color: var(--doc-teal); background: #fff; }
+.doc-heading-icon { display: inline-grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border: 1.75px solid var(--doc-teal); border-radius: 50%; color: var(--doc-teal); background: var(--surface); }
 .doc-heading-icon svg { color: var(--doc-teal); }
 .doc-section { margin-top: 34px; }
 .doc-section-first { margin-top: 24px; }
