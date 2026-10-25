@@ -11,7 +11,7 @@ import { createAuth, customerRecord, staffRecord } from './auth.mjs';
 export const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next);
 
-export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR || path.join(projectDirectory, 'data'), seeds, authOptions } = {}) {
+export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR || path.join(projectDirectory, 'data'), seeds, authOptions, screeningOptions = false } = {}) {
   dataDirectory = path.resolve(dataDirectory);
   if (seeds === undefined) {
     const { loadSeeds } = await import('./seed.mjs');
@@ -105,6 +105,11 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
   app.post('/api/requests/:id/notes', auth.requireStaff, asyncRoute(async (request, response) => {
     response.status(201).json(staffRecord(await store.addNote(request.params.id, validateNote(request.body))));
   }));
+  let screening;
+  if (screeningOptions !== false) {
+    const { registerScreeningRoutes } = await import('./screening/runtime.mjs');
+    screening = await registerScreeningRoutes(app, { auth, store, dataDirectory, ...screeningOptions });
+  }
   app.use('/api', (_request, _response, next) => next(new HttpError(404, 'This API endpoint could not be found.')));
   app.use((error, _request, response, _next) => {
     if (response.headersSent) return;
@@ -117,5 +122,5 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     console.error('Request could not be completed:', error.code || error.name || 'UnknownError');
     response.status(500).json({ error: 'We could not save your changes. Please try again.' });
   });
-  return { app, store, auth };
+  return { app, store, auth, screening };
 }

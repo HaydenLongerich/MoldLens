@@ -184,7 +184,7 @@ export async function createAuth(dataDirectory, { setupCode: suppliedSetupCode, 
   }
 
   return {
-    state, setup, login, userForRequest, owns,
+    state, setup, login, userForRequest, owns, getCustomerHash: customerHash,
     async getSetupCode() { return await readAccount() ? null : setupCode; },
     requireStaff(request, _response, next) {
       if (!userForRequest(request)) return next(new HttpError(401, 'Please sign in to access the staff dashboard.'));
@@ -211,6 +211,6 @@ export function staffRecord(record) {
 }
 
 export function customerRecord(record) {
-  const allowed = ['id', 'name', 'email', 'phone', 'address', 'postalCode', 'propertyType', 'area', 'size', 'duration', 'description', 'signs', 'contactPreference', 'consent', 'status', 'createdAt', 'updatedAt', 'assignee', 'scheduledAt', 'attachments', 'isDemo', 'relationship'];
+  const allowed = ['id', 'name', 'email', 'phone', 'address', 'postalCode', 'propertyType', 'area', 'size', 'duration', 'description', 'signs', 'contactPreference', 'consent', 'status', 'createdAt', 'updatedAt', 'assignee', 'scheduledAt', 'attachments', 'isDemo', 'relationship', 'screening'];
   return { ...Object.fromEntries(allowed.filter((key) => Object.hasOwn(record, key)).map((key) => [key, record[key]])), notes: [] };
 }

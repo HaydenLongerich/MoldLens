@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowDownToLine, ArrowRight, ArrowUpRight, CalendarDays, Check, CheckCheck, ChevronRight, ExternalLink, FileImage, FileText, Inbox, LoaderCircle, Mail, MapPin, MessageSquare, Phone, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Users, Video, X } from 'lucide-react';
 import { api } from '../lib/api';
 import type { InspectionRequest, PageProps, Priority, RequestStatus } from '../lib/types';
+import { SCREENING_STATUS_LABELS } from './ScreeningPage';
 import './admin.css';
 
 const statuses: RequestStatus[] = ['New', 'In review', 'Scheduled', 'Completed', 'Referred'];
@@ -87,6 +88,8 @@ function RequestDetail({ request, onClose, onUpdate, onRefer }: { request: Inspe
       <div className="admin-detail-content">
         <div className="admin-detail-title"><div className="admin-person-avatar large">{initials(request.name)}</div><div><div className="admin-case-id">{request.id} {request.isDemo && <span className="admin-sample-tag">Sample case</span>}</div><h2 id="case-title">{request.name}</h2><span className="admin-subtle">Submitted {formatDate(request.createdAt)}</span></div></div>
         <div className="admin-detail-badges"><StatusBadge status={request.status} /><span className={`admin-priority ${request.priority.toLowerCase()}`}><span />{request.priority} priority</span></div>
+
+        {request.screening && <section className="admin-detail-section"><div className="admin-section-heading"><h3>Preliminary screening</h3><span>{SCREENING_STATUS_LABELS[request.screening.status]}</span></div><p className="admin-subtle">{request.screening.reference}</p><a className="btn btn-primary" href={`#screening?id=${encodeURIComponent(request.screening.id)}&view=staff`}>{request.screening.reportAvailable ? 'View screening report' : 'View screening details'}<ArrowRight size={16} /></a></section>}
 
         <section className="admin-detail-section"><h3>Contact & property</h3><div className="admin-contact-grid">
           <div><Mail size={16} />{request.email ? <a href={`mailto:${request.email}`}>{request.email}</a> : <span>No email provided</span>}</div>

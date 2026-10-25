@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Camera, ChevronDown, FileText, MapPin, RefreshCw } from 'lucide-react';
 import { api } from '../lib/api';
 import type { CustomerRequest, PageProps, RequestStatus } from '../lib/types';
+import { ScreeningsList, SCREENING_STATUS_LABELS } from './ScreeningPage';
 import './simple-requests.css';
 
 const statusDescriptions: Record<RequestStatus, string> = {
@@ -21,6 +22,8 @@ export default function RequestsPage({ onNavigate }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [screeningCount, setScreeningCount] = useState<number | null>(null);
+  const [screeningRefresh, setScreeningRefresh] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -42,14 +45,14 @@ export default function RequestsPage({ onNavigate }: PageProps) {
       <header className="simple-requests-heading">
         <div>
           <h1>My requests</h1>
-          <p>Check requests submitted from this browser.</p>
+          <p>Check requests and screenings started in this browser.</p>
         </div>
-        {requests.length > 0 && <button className="btn btn-secondary" onClick={() => onNavigate('inspection')}>New request</button>}
+        {(requests.length > 0 || (screeningCount || 0) > 0) && <div className="screening-request-actions"><button className="btn btn-primary" onClick={() => onNavigate('screening')}>New screening</button><button className="btn btn-secondary" onClick={() => onNavigate('inspection')}>New request</button></div>}
       </header>
 
       {requests.length > 0 && <div className="simple-requests-toolbar">
         <span>{requests.length} request{requests.length === 1 ? '' : 's'}</span>
-        <button onClick={() => void load()} disabled={loading}><RefreshCw size={15} />{loading ? 'Refreshing…' : 'Refresh'}</button>
+        <button onClick={() => { setScreeningRefresh(value => value + 1); void load(); }} disabled={loading}><RefreshCw size={15} />{loading ? 'Refreshing…' : 'Refresh'}</button>
       </div>}
 
       {error && <div className="simple-requests-error" role="alert">
@@ -57,12 +60,12 @@ export default function RequestsPage({ onNavigate }: PageProps) {
         <button className="btn btn-secondary" onClick={() => void load()}>Try again</button>
       </div>}
 
-      {loading && requests.length === 0 ? <p className="simple-requests-loading" role="status">Loading your requests…</p>
-        : !error && requests.length === 0 ? <section className="simple-requests-empty">
+      {loading && requests.length === 0 ? <p className="simple-requests-loading" role="status">Loading your requests and screenings…</p>
+        : !error && requests.length === 0 && screeningCount === 0 ? <section className="simple-requests-empty">
           <span className="simple-requests-empty-icon"><FileText size={28} strokeWidth={1.5} /></span>
           <h2>No requests yet</h2>
           <p>Tell us what you’ve noticed to get started.</p>
-          <button className="btn btn-primary" onClick={() => onNavigate('inspection')}>Start a request <ArrowRight size={17} /></button>
+          <div className="screening-empty-actions"><button className="btn btn-primary" onClick={() => onNavigate('screening')}>Start a screening <ArrowRight size={17} /></button><button className="btn btn-secondary" onClick={() => onNavigate('inspection')}>Start a request <ArrowRight size={17} /></button></div>
         </section>
           : <div className="simple-requests-list">
             {requests.map(request => {
@@ -75,6 +78,7 @@ export default function RequestsPage({ onNavigate }: PageProps) {
                 </div>
                 {!isOpen && <p className="simple-requests-summary">{request.description}</p>}
                 <p className="simple-requests-next">{statusDescriptions[request.status]}</p>
+                {request.screening && <div className="screening-linked-request"><span>Screening: {SCREENING_STATUS_LABELS[request.screening.status]}</span><a href={`#screening?id=${encodeURIComponent(request.screening.id)}`}>{request.screening.reportAvailable ? 'View screening report' : request.screening.status === 'needs_answers' ? 'Answer screening questions' : 'View screening'}<ArrowRight size={15} /></a></div>}
                 <div className="simple-requests-card-bottom">
                   <span className="simple-requests-reference my-request-id">{request.id}</span>
                   <button className="simple-requests-toggle" aria-expanded={isOpen} aria-controls={`details-${request.id}`} onClick={() => setExpanded(isOpen ? null : request.id)}>
@@ -111,6 +115,7 @@ export default function RequestsPage({ onNavigate }: PageProps) {
               </article>;
             })}
           </div>}
+      <ScreeningsList refreshKey={screeningRefresh} excludeIds={requests.flatMap(request => request.screening ? [request.screening.id] : [])} hideWhenEmpty onCount={setScreeningCount} />
       <p className="simple-requests-demo">Demo: no one is contacted.</p>
     </div>
   );

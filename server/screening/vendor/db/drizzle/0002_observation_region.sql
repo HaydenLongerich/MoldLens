@@ -1,0 +1,1 @@
+ALTER TABLE "observations" ADD COLUMN "region" jsonb;

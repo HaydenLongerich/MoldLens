@@ -5,17 +5,18 @@ import RequestsPage from './pages/RequestsPage';
 import AdminPage from './pages/AdminPage';
 import ContractorsPage from './pages/ContractorsPage';
 import StaffLoginPage from './pages/StaffLoginPage';
+import ScreeningPage from './pages/ScreeningPage';
 import { AUTH_STORAGE_SIGNAL, getSession, isOfflinePreview, signalAuthChange, signOut, type AuthSession } from './lib/auth';
 import type { Page } from './lib/types';
 import './customer.css';
 
 const pageLabels: Record<Page, string> = {
-  inspection: 'Request a review', requests: 'My requests',
+  inspection: 'Request a review', screening: 'Start a screening', requests: 'My requests',
   admin: 'Client dashboard', contractors: 'Find a specialist', login: 'Staff sign in',
 };
 
 function readPage(): Page {
-  const value = window.location.hash.replace('#', '');
+  const value = window.location.hash.slice(1).split('?')[0];
   return Object.hasOwn(pageLabels, value) ? value as Page : 'inspection';
 }
 
@@ -28,6 +29,7 @@ function Brand() {
 
 export default function App() {
   const [page, setPage] = useState<Page>(readPage);
+  const [routeHash, setRouteHash] = useState(() => window.location.hash);
   const [menuOpen, setMenuOpen] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -102,6 +104,7 @@ export default function App() {
   useEffect(() => {
     const syncPage = () => {
       setPage(readPage());
+      setRouteHash(window.location.hash);
       setMenuOpen(false);
       window.scrollTo(0, 0);
     };
@@ -111,11 +114,13 @@ export default function App() {
 
   const isStaff = !isOfflinePreview && !!session?.user;
   const showAdmin = page === 'admin' && isStaff && !authError;
-  const staffRoute = page === 'admin' || page === 'login';
+  const staffScreening = page === 'screening' && new URLSearchParams(routeHash.split('?')[1] || '').get('view') === 'staff';
+  const staffRoute = page === 'admin' || page === 'login' || staffScreening;
+  const showScreening = page === 'screening' && (!staffScreening || (isStaff && !authError));
 
   useEffect(() => {
-    document.title = `${page === 'admin' && !showAdmin ? 'Staff sign in' : pageLabels[page]} · MoldLens`;
-  }, [page, showAdmin]);
+    document.title = `${staffRoute && (!isStaff || authError) ? 'Staff sign in' : staffScreening ? 'Screening details' : pageLabels[page]} · MoldLens`;
+  }, [page, staffRoute, staffScreening, isStaff, authError]);
 
   useEffect(() => { if (page === 'login' && isStaff) navigate('admin'); }, [isStaff, navigate, page]);
 
@@ -126,7 +131,7 @@ export default function App() {
     setAuthError('');
     setAuthNotice('');
     setSignOutError('');
-    navigate('admin');
+    if (!staffScreening) navigate('admin');
   }
 
   async function logout() {
@@ -176,9 +181,10 @@ export default function App() {
       {signOutError && <p className="staff-session-error" role="alert">{signOutError}</p>}
       <main id="main-content" className={`customer-main customer-main-${page}`} tabIndex={-1}>
         {page === 'inspection' && <InspectionPage onNavigate={navigate} />}
+        {showScreening && <ScreeningPage readOnly={staffScreening} />}
         {page === 'requests' && <RequestsPage onNavigate={navigate} />}
         {page === 'contractors' && <ContractorsPage onNavigate={navigate} />}
-        {staffRoute && <StaffLoginPage session={session} loading={authLoading} error={authError} notice={authNotice} onRetry={() => void refreshSession(true)} onSignedIn={signedIn} />}
+        {staffRoute && !showScreening && <StaffLoginPage session={session} loading={authLoading} error={authError} notice={authNotice} onRetry={() => void refreshSession(true)} onSignedIn={signedIn} />}
       </main>
       <footer className="customer-footer">
         <span>MoldLens · Ottawa</span>
@@ -200,6 +206,7 @@ export default function App() {
         <a href="#admin" className="nav-item active" aria-current="page"><LayoutDashboard size={19} />Client dashboard</a>
         <a href="#contractors" className="nav-item"><UsersRound size={19} />Find a specialist</a>
         <a href="#inspection" className="nav-item"><FilePlus2 size={19} />Customer form</a>
+        <a href="#screening" className="nav-item"><ShieldCheck size={19} />Start a screening</a>
       </nav>
       <a href="#inspection" className="team-back-link"><ArrowLeft size={15} />Back to customer page</a>
     </aside>

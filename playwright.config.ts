@@ -24,8 +24,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'node server/index.mjs',
-    env: { PORT: '5175', HOST: '127.0.0.1', MOLDLENS_DATA_DIR: testDataDir },
+    command: 'node scripts/build-screening.mjs && node server/index.mjs',
+    // Browser regressions must never use a developer's configured live AI key.
+    env: { PORT: '5175', HOST: '127.0.0.1', MOLDLENS_DATA_DIR: testDataDir, AI_PROVIDER: 'mock' },
     url: 'http://127.0.0.1:5175/api/health',
     reuseExistingServer: false,
     timeout: 60_000,

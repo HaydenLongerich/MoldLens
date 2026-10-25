@@ -6,4 +6,9 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 .env
+.env.*
+!.env.example
+server/screening/runtime.mjs
+server/screening/runtime.mjs.map
+.screening-model-test-*/
 .DS_Store

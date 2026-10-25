@@ -150,6 +150,10 @@ export default function InspectionPage({ onNavigate }: PageProps) {
 
   return <div className="simple-inspection">
     <header className="simple-intro"><h1>Worried about mold?</h1><p>Add a photo and tell us what you’ve noticed.</p></header>
+    <section className="screening-entry" aria-labelledby="screening-entry-heading">
+      <div><h2 id="screening-entry-heading">Get preliminary guidance</h2><p>Screen your photos and answers for visible signs and next steps.</p></div>
+      <button type="button" className="btn btn-primary" onClick={() => onNavigate('screening')}>Start a screening<ArrowRight size={16} /></button>
+    </section>
     <form className="simple-intake-form" onSubmit={submit} noValidate>
       <fieldset disabled={submitting}>
         <div className="simple-field">

@@ -1,3 +1,5 @@
+import type { ScreeningStatus } from './screening-types';
+
 export type RequestStatus = 'New' | 'In review' | 'Scheduled' | 'Completed' | 'Referred';
 export type Priority = 'Low' | 'Medium' | 'High';
 export interface Attachment { id: string; name: string; type: string; size: number; url: string; }
@@ -40,6 +42,7 @@ export interface InspectionRequest {
   isDemo?: boolean;
   relationship?: string;
   source?: CaseSource;
+  screening?: { id: string; reference: string; status: ScreeningStatus; reportAvailable: boolean };
 }
 export interface Contractor {
   id: string;
@@ -59,5 +62,5 @@ export interface Contractor {
   sourceUrl: string;
 }
 export type CustomerRequest = Omit<InspectionRequest, 'priority' | 'notes' | 'source'>;
-export type Page = 'inspection' | 'requests' | 'admin' | 'contractors' | 'login';
+export type Page = 'inspection' | 'screening' | 'requests' | 'admin' | 'contractors' | 'login';
 export interface PageProps { onNavigate: (page: Page) => void; }

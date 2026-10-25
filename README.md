@@ -11,10 +11,13 @@ For the server version:
 ```sh
 cd /Users/jaden/soonhacks/MoldLens
 npm install
+cp -n .env.example .env
 npm run dev
 ```
 
 Open **http://127.0.0.1:5173**. The server binds to the local computer. Uploads and requests persist under `data/`. Set `PORT` or `MOLDLENS_DATA_DIR` to change the port or storage directory.
+
+Use Node 20.19 or newer. For photo/video AI screening, set `OPENAI_API_KEY` in `.env` and restart the server. The default model is `gpt-4.1`; Anthropic and explicitly labeled mock mode are also supported. Form-only screening works without a key. Install scripts supply Sharp/FFmpeg; `FFMPEG_PATH` and `FFPROBE_PATH` can point to existing binaries if needed. API keys never belong in browser code or `VITE_*` variables.
 
 ```sh
 npm run build    # TypeScript check, production bundle, standalone preview
@@ -34,6 +37,7 @@ Signed-in staff can switch between **View customer page** and **Dashboard** and 
 
 ## Workflows
 
+- **Start a screening:** a consented draft with optional photos/video and contact details, resumable uploads, saved context, background processing, up to four follow-up questions, and a full evidence-linked preliminary report. Screenings persist in a local PGlite database and become staff cases on submission. Reports explain visible conditions and limitations; they do not identify species or confirm mold. Missing AI configuration is shown clearly. See [screening setup, routes, limits, and operating notes](server/screening/README.md).
 - **Request a review:** one short form for the concern, name, email, and postal code. Photos and videos are optional; address and phone sit under an optional details section. Includes upload previews, validation, resumable text drafts, consent, and a saved request number. Up to 10 files, 25 MB each. A specialist reviews submissions; the app does not diagnose mold from images.
 - **My requests:** a simple list of this browser's requests with their current status. Open a request to see the concern, photos/video, and any appointment details. No email tracking links are sent.
 - **Client dashboard:** search/filter cases, assign team members, change status/priority, schedule inspections, add notes, and export filtered CSV. Review source findings, historical estimates, discrepancies, timelines, and reports.
@@ -60,7 +64,7 @@ npm run test:e2e       # Browser tests with an isolated server and temporary dat
 npm run test:offline   # Browser tests against dist/offline.html and IndexedDB
 ```
 
-The API tests exercise first-account setup, sign-in/out, session expiry, request and upload authorization, customer isolation, and existing validation and persistence. Browser tests require Playwright Chromium (`npx playwright install chromium`) and cover customer submission, staff navigation, provider filtering/comparison, and mobile layouts. Tests use temporary stores or isolated browser contexts.
+The API tests exercise authentication, customer isolation, screening persistence, concurrent uploads, background jobs, reports, model validation, and staff retry. Native media tests include real JPEG processing and synthetic video; AI responses are injected fixtures with no live provider calls. Browser tests require Playwright Chromium (`npx playwright install chromium`) and cover customer submission, staff navigation, provider filtering/comparison, and mobile layouts. Tests use temporary stores or isolated browser contexts.
 
 The build and non-browser tests run in this restricted workspace. Listening sockets, Chromium launch, and browser navigation to `file://` are blocked here; live server and visual verification must run from an ordinary local terminal.
 
