@@ -1,0 +1,20 @@
+.customer-demo-tools { margin: 12px 0 20px; border: 1px solid var(--border); border-radius: 12px; font-size: 12px; background: #fffcf8; }
+.customer-demo-tools > summary { cursor: pointer; min-height: 44px; padding: 13px 16px; color: var(--muted); }
+.customer-demo-body { padding: 0 16px 16px; display: grid; gap: 16px; }
+.customer-demo-body > p { margin: 0; color: var(--muted); line-height: 1.7; }
+.customer-demo-body form { display: flex; gap: 8px; align-items: end; }
+.customer-demo-body label { display: flex; flex: 1; flex-direction: column; gap: 8px; margin: 0 !important; font-size: 12px; }
+.customer-demo-body input, .customer-demo-body select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--input-surface); color: var(--ink); font-size: 16px; }
+.customer-demo-body .btn { min-height: 44px; white-space: nowrap; font-size: 12px; }
+.customer-demo-body small { display: block; color: var(--muted); line-height: 1.6; font-size: 10px; }
+.customer-demo-home { position: relative; width: min(390px, 100%); margin-top: 18px; background: transparent; }
+.customer-demo-home[open] .customer-demo-body { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; max-height: min(450px, 65vh); overflow-y: auto; padding-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 32px #273a3620; z-index: 5; }
+@media (max-width: 440px) { .customer-demo-body form { flex-wrap: wrap; } .customer-demo-body form > label { flex-basis: 100%; } .customer-demo-body form > button { width: 100%; } }
+
+.demo-routing { margin: 16px 0; font-size: 12px; }
+.demo-routing summary { min-height: 44px; cursor: pointer; padding: 12px 0; }
+.demo-routing p { color: var(--muted); font-size: 11px; }
+.demo-routing ul { padding: 0; list-style: none; }
+.demo-routing li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.demo-routing li > span:last-child { text-align: right; }
+.demo-routing small { display: block; color: var(--muted); font-size: 10px; line-height: 1.7; }

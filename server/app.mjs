@@ -12,7 +12,7 @@ import { registerMarketplace } from './marketplace.mjs';
 export const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next);
 
-export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR || path.join(projectDirectory, 'data'), seeds, authOptions, screeningOptions = false } = {}) {
+export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR || path.join(projectDirectory, 'data'), seeds, authOptions, screeningOptions = false, marketplaceOptions = {} } = {}) {
   dataDirectory = path.resolve(dataDirectory);
   if (seeds === undefined) {
     const { loadSeeds } = await import('./seed.mjs');
@@ -108,7 +108,7 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     response.status(201).json(staffRecord(await store.addNote(request.params.id, validateNote(request.body))));
   }));
   let screening;
-  const marketplace = await registerMarketplace(app, { dataDirectory, auth, ownsScreening: (req, id) => screening?.ownsCustomerScreening(req, id) || false });
+  const marketplace = await registerMarketplace(app, { dataDirectory, auth, ...marketplaceOptions, ownsScreening: (req, id) => screening?.ownsCustomerScreening(req, id) || false });
   if (screeningOptions !== false) {
     const { registerScreeningRoutes } = await import('./screening/runtime.mjs');
     screening = await registerScreeningRoutes(app, { auth, store, dataDirectory, ...screeningOptions, onScreeningUpdate: marketplace.syncScreening });
@@ -125,5 +125,5 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     console.error('Request could not be completed:', error.code || error.name || 'UnknownError');
     response.status(500).json({ error: 'We could not save your changes. Please try again.' });
   });
-  return { app, store, auth, screening };
+  return { app, store, auth, screening, marketplace };
 }

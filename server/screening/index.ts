@@ -154,7 +154,7 @@ export async function registerScreeningRoutes(app: any, options: any) {
       const [published] = current.reportAvailable ? await db.select().from(reportVersions).where(and(eq(reportVersions.assessmentId, id), inArray(reportVersions.status, ['published', 'validated']))).orderBy(desc(reportVersions.version)).limit(1) : [];
       const content: any = published && (published.validation as any)?.passed ? published.content : null;
       await options.onScreeningUpdate({ id, reference: current.reference, status: current.status, reportAvailable: current.reportAvailable,
-        sharingAllowed: true, customerOwnerHash: binding.owner_hash, city: binding.sharing_city,
+        sharingAllowed: true, customerOwnerHash: binding.owner_hash, city: binding.sharing_city, postalCode: binding.contact?.postalCode || '',
         createdAt: current.createdAt, area: current.details.areas.map(area => AREAS.find(item => item.id === area)?.label ?? area).join(', ') || 'Property',
         description: current.details.statement || current.details.concerns.map(concern => CONCERNS.find(item => item.id === concern)?.label ?? concern).join(', '),
         projectAreas: current.details.areas.map(areaId => ({ id: areaId, label: AREAS.find(area => area.id === areaId)?.label ?? areaId,
@@ -292,9 +292,11 @@ export async function registerScreeningRoutes(app: any, options: any) {
     await serial(req.params.id, async () => {
       const { a, p } = await permitted(req, req.params.id, 'assessment.read', false);
       if (req.body?.contractorSharing === true) {
-        if (req.body.city !== 'Newmarket') throw new ValidationError('Contractor quotes are currently available in Newmarket.');
-        if ((await detail(a.id)).details?.region !== 'ON') throw new ValidationError('Newmarket contractor quotes require an Ontario screening.');
-        await db.execute(sql`UPDATE moldlens_screening_links SET contractor_sharing=true,sharing_city='Newmarket' WHERE assessment_id=${a.id}::uuid`);
+        const details = (await detail(a.id)).details;
+        if (details?.region !== 'ON') throw new ValidationError('Contractor matching currently supports Ontario postal codes.');
+        const code = details.contact?.postalCode?.replace(/\s/g, '') || '';
+        if (!/^[KLMNP][0-9][ABCEGHJ-NPRSTV-Z][0-9][ABCEGHJ-NPRSTV-Z][0-9]$/.test(code)) throw new ValidationError('Enter an Ontario postal code to find contractors within 50 km.');
+        await db.execute(sql`UPDATE moldlens_screening_links SET contractor_sharing=true,sharing_city='Ontario' WHERE assessment_id=${a.id}::uuid`);
       }
       if (!['draft', 'uploading'].includes(a.status)) { await syncClient(a.id); return; }
       const pending = await db.select().from(uploadSessions).where(and(eq(uploadSessions.assessmentId, a.id), eq(uploadSessions.status, 'open')));

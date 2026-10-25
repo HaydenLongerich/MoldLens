@@ -10,11 +10,11 @@ Legacy `/#requests`, `/#inspection`, and `/#contractors` links redirect to these
 
 ## Automatic contractor delivery
 
-The screening form collects permission to automatically share the completed screening with Newmarket contractors. Submitting saves that permission and service area in `moldlens_screening_links.contractor_sharing` and `sharing_city`.
+The screening form collects permission to automatically share the completed screening with subscribed contractors within 50 km of their Ontario postal code. Submitting saves that permission and Ontario region in `moldlens_screening_links.contractor_sharing` and `sharing_city`.
 
 `syncClient` in `server/screening/index.ts` calls the trusted `onScreeningUpdate` callback. `server/app.mjs` connects it to the marketplace's `syncScreening`. Submitted screenings appear as processing for the owner. Only validated/published reports in `ready_preview` or `inconclusive` reach contractors. A deterministic screening ID prevents duplicate records and quote loss on retries. The background worker reconciles submitted screenings on startup, including cases where an earlier process stopped before writing the legacy client-case link.
 
-Recipients are active, unexpired contractor memberships serving Newmarket. Paused and pending companies are excluded. No separate customer share/request action is required for new screenings. If no contractors are eligible, later worker passes retry delivery. Demo membership activation also makes existing open, shared local projects available to that company; completed/awarded projects are not backfilled.
+Recipients are active, unexpired registered contractor memberships whose company postal-code location is within 50 km of the screening postal-code location. Real routing has no city fallback; missing geocoding setup leaves matching pending. Paused and pending companies are excluded. No separate customer share/request action is required for new screenings. If no contractors are eligible, later worker passes retry delivery. Demo membership activation also makes existing open, shared local projects available to that company; completed/awarded projects are not backfilled.
 
 The contractor receives the screening reference, area, description, validated report headline, and finding statements. Raw media, customer account/contact details, and private staff notes are not exposed through the marketplace. Each contractor sees only its own quotes and conversation.
 
@@ -61,3 +61,7 @@ These are service-area examples, not enrolled partners:
 - [Desa Contracting & Restoration](https://desacontracting.com/areas-served/newmarket-on/)
 
 The server remains a localhost prototype. Production hosting, customer accounts/recovery, business verification, billing, and SMS are separate integrations.
+
+## Ontario directory and notifications
+
+See [Ontario setup and operational notes](ontario-contractor-directory.md) for the Google Place ID database, live ratings and attributed reviews, optional company-provided Google profile links, postal matching, bounded province indexing, and the durable Resend invitation outbox. Emails use the private signup address and default to previews in company settings. Real Google and email credentials are not included. Targeted marketplace, screening integration and routing checks now total 21 tests.

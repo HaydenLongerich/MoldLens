@@ -72,7 +72,7 @@
 .market-workspace label, .market-login label { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; font-size: 12px; font-weight: 500; }
 .market-workspace input:not([type=checkbox]), .market-workspace textarea, .market-workspace select, .market-login input, .market-login select { width: 100%; min-width: 0; min-height: 46px; padding: 12px; border: 1px solid var(--border-strong); border-radius: 9px; background: var(--input-surface); color: var(--ink); font-size: 16px; }
 .market-workspace textarea { resize: vertical; line-height: 1.6; }
-.market-workspace .market-check { flex-direction: row; align-items: center; gap: 10px; font-weight: 400; }
+.market-workspace .market-check, .market-login .market-check { flex-direction: row; align-items: center; gap: 10px; font-weight: 400; }
 .market-check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .market-own-quote { padding-top: 20px; margin-top: 24px; border-top: 1px solid var(--border); }
 .market-own-quote > strong { font-size: 25px; font-weight: 550; }
@@ -205,3 +205,16 @@
   .market-chat-log { height: 390px; }
   .market-directory-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+.market-login .market-check input[type=checkbox] { flex: 0 0 20px; width: 20px; min-height: 20px; height: 20px; padding: 0; margin: 0; }
+
+.proposal-service { border: 1px solid var(--border); border-radius: 12px; margin: 12px 0; min-width: 0; overflow: hidden; }
+.proposal-service > summary { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; min-height: 64px; list-style: none; }
+.proposal-service > summary::-webkit-details-marker { display: none; }
+.proposal-service > summary strong { font-size: 13px; font-weight: 550; }
+.proposal-service > summary small { display: block; font-size: 11px; margin-top: 5px; }
+.proposal-service > summary > span:last-child { display: flex; align-items: center; gap: 10px; font-size: 12px; white-space: nowrap; }
+.proposal-service[open] > summary { border-bottom: 1px solid var(--border); }
+.proposal-service[open] > summary svg { transform: rotate(180deg); }
+.proposal-service > .proposal-line { border: 0; margin: 0; border-radius: 0; }
+.proposal-service > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }

@@ -7,14 +7,16 @@ import { createApp } from '../server/app.mjs';
 import { dispatch, jsonRequest, cookieHeader, withCookie } from './http-helpers.mjs';
 import { confirmedQuote } from './proposal-fixtures.mjs';
 
-const context = { propertyType: 'house', region: 'ON', areas: ['basement', 'bathroom', 'attic'], concerns: ['visible_spots'], statement: 'Spots near the basement window, bathroom moisture and attic staining.' };
+const context = { propertyType: 'house', region: 'ON', areas: ['basement', 'bathroom', 'attic'], concerns: ['visible_spots'], statement: 'Spots near the basement window, bathroom moisture and attic staining.', contact: { postalCode: 'L3Y 1A1' } };
 const get = (app, url, cookie = '') => dispatch(app, withCookie({ url }, cookie));
 const post = (app, url, body = {}, cookie = '') => dispatch(app, withCookie(jsonRequest('POST', url, body), cookie));
 async function setup(t) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'moldlens-screen-market-'));
-  const service = await createApp({ dataDirectory: directory, seeds: [], screeningOptions: { databaseUrl: 'memory:', models: { vision: null, text: null } } });
-  for (const companyId of ['moldtech', 'aro', 'desa']) { const cookie = cookieHeader(await post(service.app, '/api/marketplace/demo-login', { companyId })); await post(service.app, '/api/marketplace/membership/demo-pay', { confirm: true }, cookie); }
-  t.after(async () => { await service.screening.stop(); await rm(directory, { recursive: true, force: true }); });
+  const service = await createApp({ dataDirectory: directory, seeds: [], marketplaceOptions: { directoryOptions: { resolvePostal: async () => ({ lat: 44.05, lng: -79.46 }) } }, screeningOptions: { databaseUrl: 'memory:', models: { vision: null, text: null } } });
+  for (const companyId of ['moldtech', 'kleen', 'moldguy']) { const cookie = cookieHeader(await post(service.app, '/api/marketplace/demo-login', { companyId })); await post(service.app, '/api/marketplace/membership/demo-pay', { confirm: true }, cookie); }
+  service.cookies = {}; service.ids = {};
+  for (const key of ['moldtech', 'kleen', 'moldguy']) { const result = await post(service.app, '/api/marketplace/register', { name: `Test ${key}`, email: `${key}@example.test`, password: 'testing-password-long', postalCode: 'L3Y 1A1', notificationsEnabled: true }); const cookie = cookieHeader(result); service.cookies[key] = cookie; service.ids[key] = result.json().company.id; await post(service.app, '/api/marketplace/membership/demo-pay', { confirm: true }, cookie); }
+  t.after(async () => { await service.screening.stop(); await service.marketplace.stop(); await rm(directory, { recursive: true, force: true }); });
   return service;
 }
 async function draft(app) {
@@ -38,18 +40,18 @@ async function complete(service, owner) {
 test('a real completed screening automatically reaches eligible contractors once, then accepts quotes', async t => {
   const service = await setup(t); const { app } = service; const owner = await draft(app);
   assert.equal((await post(app, `/api/marketplace/screenings/${owner.id}/removal`, { removed: true }, owner.cookie)).status, 200);
-  const aro = cookieHeader(await post(app, '/api/marketplace/demo-login', { companyId: 'aro' }));
+  const aro = service.cookies.kleen;
   await post(app, '/api/marketplace/subscription', { status: 'paused' }, aro);
   const submitted = await post(app, `/api/screenings/${owner.id}/submit`, { contractorSharing: true, city: 'Newmarket' }, owner.cookie);
   assert.equal(submitted.status, 200, submitted.body.toString());
   const pending = (await get(app, '/api/marketplace/reports', owner.cookie)).json();
   assert.equal(pending.length, 1); assert.equal(pending[0].status, 'processing'); assert.equal(pending[0].recipients.length, 0);
-  const moldtech = cookieHeader(await post(app, '/api/marketplace/demo-login', { companyId: 'moldtech' }));
+  const moldtech = service.cookies.moldtech;
   assert.equal((await get(app, '/api/marketplace/reports?role=partner', moldtech)).json().length, 0);
   await complete(service, owner);
   const report = (await get(app, '/api/marketplace/reports', owner.cookie)).json()[0];
   assert.equal(report.screening.id, owner.id); assert.equal(report.screening.reportAvailable, true); assert.equal(report.status, 'shared');
-  assert.equal(report.isSample, false); assert.deepEqual(report.recipientIds, ['moldtech', 'desa']); assert.ok(report.summary);
+  assert.equal(report.isSample, false); assert.deepEqual(report.recipientIds, [service.ids.moldtech, service.ids.moldguy]); assert.ok(report.summary);
   assert.deepEqual(report.projectAreas.map(area => area.id), ['basement', 'bathroom', 'attic']);
   assert.equal(report.customerOwnerHash, undefined);
   const inbox = (await get(app, '/api/marketplace/reports?role=partner', moldtech)).json();
@@ -74,7 +76,9 @@ test('unshared and unowned screenings never enter contractor inboxes; samples au
   const service = await setup(t); const { app } = service; const owner = await draft(app); const outsider = await draft(app);
   assert.equal((await post(app, `/api/marketplace/screenings/${owner.id}/removal`, { removed: true }, outsider.cookie)).status, 404);
   assert.equal((await post(app, `/api/screenings/${owner.id}/submit`, { contractorSharing: true, city: 'Newmarket' }, outsider.cookie)).status, 404);
-  assert.equal((await post(app, `/api/screenings/${owner.id}/submit`, { contractorSharing: true, city: 'Toronto' }, owner.cookie)).status, 400);
+  await dispatch(app, withCookie(jsonRequest('PATCH', `/api/screenings/${owner.id}`, { ...context, contact: {} }), owner.cookie));
+  assert.equal((await post(app, `/api/screenings/${owner.id}/submit`, { contractorSharing: true }, owner.cookie)).status, 400);
+  await dispatch(app, withCookie(jsonRequest('PATCH', `/api/screenings/${owner.id}`, context), owner.cookie));
   await post(app, `/api/screenings/${owner.id}/submit`, {}, owner.cookie);
   await complete(service, owner);
   assert.equal((await get(app, '/api/marketplace/reports', owner.cookie)).json().length, 0);

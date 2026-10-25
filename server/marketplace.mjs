@@ -3,12 +3,12 @@ import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { HttpError } from './validation.mjs';
 import { validateProposal, proposalExpired } from './project-proposals.mjs';
+import { createDirectory, postalCode, withinRadius, distanceKm } from './contractor-directory.mjs';
+import { createInvitationSender, enqueueInvitations, invitationContent } from './quote-invitations.mjs';
 
-export const exampleCompanies = [
-  { id: 'moldtech', name: 'MoldTech', initials: 'MT', city: 'Newmarket', services: ['Mold inspection', 'Mold removal'], phone: '1-866-684-7684', website: 'https://www.moldtech.ca/newmarket', sourceUrl: 'https://www.moldtech.ca/contact', description: 'Mold testing and remediation serving Newmarket, based in nearby East Gwillimbury.' },
-  { id: 'aro', name: 'ARO Restoration', initials: 'AR', city: 'Newmarket', services: ['Mold removal', 'Water damage'], phone: '416-938-4552', website: 'https://www.arorestorations.ca/service-areas/newmarket', sourceUrl: 'https://www.arorestorations.ca/service-areas/newmarket', description: 'Water, fire and mold restoration with a published Newmarket service area.' },
-  { id: 'desa', name: 'Desa Contracting & Restoration', initials: 'DR', city: 'Newmarket', services: ['Mold removal', 'Water damage'], phone: '905-940-8994', website: 'https://desacontracting.com/areas-served/newmarket-on/', sourceUrl: 'https://desacontracting.com/areas-served/newmarket-on/', description: 'Restoration company serving Newmarket and the GTA, based in Markham.' },
-].map(company => ({ ...company, example: true, subscription: 'pending', trialEndsAt: null, membership: { status: 'pending', amount: 100, currency: 'CAD', interval: 'month', simulated: true } }));
+import { exampleCompanies, demoLocations } from './demo-companies.mjs';
+export { exampleCompanies };
+import { registerDemoCustomers } from './demo-customers.mjs';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const now = () => new Date().toISOString();
@@ -16,7 +16,7 @@ const text = (value, label, max = 2000) => {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > max) throw new HttpError(400, `Enter ${label} (up to ${max} characters).`);
   return value.trim();
 };
-const active = company => company.subscription === 'active' && company.membership?.status === 'paid_demo' && Date.parse(company.membership.periodEnd) > Date.now();
+const active = company => company && company.subscription === 'active' && company.membership?.status === 'paid_demo' && Date.parse(company.membership.periodEnd) > Date.now();
 const proposalSnapshot = quote => { const { revisions, ...snapshot } = quote; return structuredClone(snapshot); };
 const areaId = label => ({ 'laundry-area': 'laundry', 'living-area': 'living', 'vents-ductwork': 'hvac_vents', 'windows-sills': 'windows', 'exterior-foundation': 'exterior' }[label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')] || label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
 const projectAreas = report => report.projectAreas?.length ? report.projectAreas : (report.area || 'Property').split(',').map(label => label.trim()).filter(Boolean).map(label => ({ id: areaId(label), label, description: '', findings: [] }));
@@ -38,11 +38,13 @@ function projectCoverage(report, body) {
   return { quoteType: 'project', coveredAreaIds: areas.map(area => area.id), breakdown: breakdown.map(item => ({ areaId: item.areaId, amount: item.amount })) };
 }
 
-export async function registerMarketplace(app, { dataDirectory, auth, ownsScreening = () => false }) {
+export async function registerMarketplace(app, { dataDirectory, auth, ownsScreening = () => false, directoryOptions = {}, emailOptions = {} }) {
   app.use('/api/marketplace', (req, _res, next) => {
     if (req.method === 'POST' && (!req.body || typeof req.body !== 'object' || Array.isArray(req.body))) return next(new HttpError(400, 'Please provide a JSON object.'));
     next();
   });
+  const directory = createDirectory({ dataDirectory, ...directoryOptions });
+  const sender = createInvitationSender(emailOptions);
   const filename = path.join(dataDirectory, 'marketplace.json');
   let state;
   try { state = JSON.parse(await readFile(filename, 'utf8')); }
@@ -63,9 +65,19 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
   };
   // Persist the seed once; later starts never replace user data.
   await mutate(records => { for (const company of records.companies) if (!company.membership) { company.membership = { status: 'pending', amount: 100, currency: 'CAD', interval: 'month', simulated: true }; company.subscription = company.subscription === 'paused' ? 'paused' : 'pending'; company.trialEndsAt = null; } });
+  await mutate(records => {
+    for (const old of records.companies) if (old.example && ['aro', 'desa'].includes(old.id)) { old.retired = true; old.subscription = 'paused'; }
+    for (const seed of exampleCompanies) {
+      const current = records.companies.find(c => c.id === seed.id);
+      if (current) { const { membership, subscription, ...metadata } = seed; Object.assign(current, metadata); }
+      else records.companies.push(structuredClone(seed));
+    }
+  });
+  const sampleRecipients = (records, report) => records.companies.filter(c => active(c) && c.example && !c.retired && withinRadius(report.demoLocation, c.demoLocation)).map(c => c.id);
   const sessions = new Map();
   const attempts = new Map();
   const cookie = 'moldlens_partner';
+  auth.setDemoCustomerResolver(key => { const session = key && state.demoCustomerSessions?.[key]; return session && Date.parse(session.expiresAt) > Date.now() && state.demoCustomers?.[session.ownerHash] ? session.ownerHash : null; });
   const tokenFor = req => {
     const tokens = (req.headers.cookie || '').split(';').map(item => item.trim()).filter(item => item.startsWith(`${cookie}=`));
     return tokens.length === 1 ? tokens[0].slice(cookie.length + 1) : '';
@@ -103,13 +115,17 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
     const contactRequired = !company && !contact;
     const chosenCompany = records.quotes.find(item => item.id === report.selectedQuoteId)?.companyId;
     const canSeeSelection = !company || preliminarySelection?.companyId === company.id;
-    return { ...safe, preliminarySelection: canSeeSelection && !contactRequired ? preliminarySelection || null : null, contactRequired, customerContact: !company || chosenCompany === company.id || preliminarySelection?.companyId === company.id ? contact : null, quoteCount: quotes.filter(quote => !quote.declinedAt && !quote.withdrawnAt && !quote.archivedAt && !proposalExpired(quote)).length, response: company ? contractorResponses?.[company.id] || {} : undefined, projectAreas: projectAreas(report), quotes: contactRequired ? [] : quotes, messages: records.messages.filter(item => item.reportId === report.id && (!company || item.companyId === company.id)), recipients: report.recipientIds.map(id => records.companies.find(item => item.id === id)).filter(Boolean) };
+    const demoPoint = report.demoLocation || (report.demoProject && demoLocations.find(l => l.postalCode === report.postalCode));
+    const demoMatches = demoPoint && records.companies.filter(c => c.example && !c.retired).map(c => ({ companyId: c.id, name: c.name, city: c.city, distanceKm: Math.round(distanceKm(demoPoint, c.demoLocation) * 10) / 10, inRange: withinRadius(demoPoint, c.demoLocation), received: report.recipientIds.includes(c.id) }));
+    return { ...safe, demoMatches, preliminarySelection: canSeeSelection && !contactRequired ? preliminarySelection || null : null, contactRequired, customerContact: !company || chosenCompany === company.id || preliminarySelection?.companyId === company.id ? contact : null, quoteCount: quotes.filter(quote => !quote.declinedAt && !quote.withdrawnAt && !quote.archivedAt && !proposalExpired(quote)).length, response: company ? contractorResponses?.[company.id] || {} : undefined, projectAreas: projectAreas(report), quotes: contactRequired ? [] : quotes, messages: records.messages.filter(item => item.reportId === report.id && (!company || item.companyId === company.id)), recipients: report.recipientIds.map(id => publicCompany(records.companies.find(item => item.id === id))).filter(Boolean) };
   };
+  const publicCompany = company => company && ({ id: company.id, googlePlaceId: company.googlePlaceId || null, name: company.name, initials: company.initials, city: company.city, services: company.services, phone: company.phone, website: company.website, sourceUrl: company.sourceUrl, description: company.description, example: company.example, subscription: company.subscription, trialEndsAt: null, membership: { status: company.membership.status, amount: 100, currency: 'CAD', interval: 'month', simulated: true } });
   const devOnly = req => {
     if (process.env.NODE_ENV === 'production' || !['127.0.0.1', 'localhost', '[::1]'].includes(req.hostname)) throw new HttpError(404, 'Testing tools are only available locally.');
   };
-  app.get('/api/marketplace/companies', route(async (_req, res) => { await queue; res.json(state.companies.map(company => ({ ...company, membership: { status: company.membership.status, amount: 100, currency: 'CAD', interval: 'month', simulated: true } }))); }));
-  app.get('/api/marketplace/session', route(async (req, res) => { await queue; res.json({ company: partner(req), demoAvailable: process.env.NODE_ENV !== 'production' }); }));
+  const customerDemo = registerDemoCustomers(app, { auth, mutate, records: () => state, devOnly, route });
+  app.get('/api/marketplace/companies', route(async (_req, res) => { await queue; res.json(state.companies.filter(c => !c.retired).map(publicCompany)); }));
+  app.get('/api/marketplace/session', route(async (req, res) => { await queue; const company = partner(req); res.json({ company: company && { ...company, notificationEmail: state.accounts.find(a => a.companyId === company.id)?.email || null }, demoAvailable: process.env.NODE_ENV !== 'production', directoryConfigured: directory.googleConfigured, emailMode: sender.mode, emailReady: sender.ready }); }));
   app.get('/api/marketplace/customer-contact', route(async (req, res) => {
     await queue; res.json({ contact: state.customerContacts?.[auth.getCustomerHash(req)] || null });
   }));
@@ -121,7 +137,7 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
     const digits = rawPhone.replace(/\D/g, '');
     if (!/^\+?[\d\s().-]+$/.test(rawPhone) || !(/^\d{10}$/.test(digits) || /^1\d{10}$/.test(digits) || rawPhone.startsWith('+') && /^\d{10,15}$/.test(digits))) throw new HttpError(400, 'Enter a valid phone number, including the country code if outside Canada.');
     const phone = rawPhone.startsWith('+') || digits.length !== 10 ? `+${digits}` : `+1${digits}`;
-    const contact = await mutate(records => { const contact = { email, phone }; (records.customerContacts ||= {})[owner.hash] = contact; return contact; });
+    const contact = await mutate(records => { const contact = { email, phone }; (records.customerContacts ||= {})[owner.hash] = contact; customerDemo.rememberEmail(records, owner.hash, email); return contact; });
     owner.save(res); res.json(contact);
   }));
   const removedFor = (records, req) => (records.removedScreenings || []).filter(item => item.ownerHash === auth.getCustomerHash(req)).map(({ key, removedAt }) => ({ key, removedAt }));
@@ -143,7 +159,7 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
   }));
   app.post('/api/marketplace/demo-login', route(async (req, res) => {
     devOnly(req); await queue;
-    const company = state.companies.find(item => item.id === req.body.companyId && item.example);
+    const company = state.companies.find(item => item.id === req.body.companyId && item.example && !item.retired);
     if (!company) throw new HttpError(400, 'Choose an example company.');
     res.json({ company: startSession(req, res, company.id) });
   }));
@@ -151,13 +167,15 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
     const name = text(req.body.name, 'your company name', 100);
     const email = text(req.body.email, 'an email address', 254).toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
+    const servicePostalCode = postalCode(req.body.postalCode);
+    if (req.body.notificationsEnabled !== true) throw new HttpError(400, 'Confirm that you want screening invitations at your signup email.');
     const password = text(req.body.password, 'a password', 128);
     if (password.length < 12) throw new HttpError(400, 'Use a password with at least 12 characters.');
     const salt = randomBytes(16).toString('hex');
     const passwordHash = scryptSync(password, salt, 64).toString('hex');
     const company = await mutate(records => {
       if (records.accounts.some(account => account.email === email)) throw new HttpError(409, 'This email already has an account. Sign in instead.');
-      const company = { id: randomUUID(), name, initials: name.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase(), city: 'Newmarket', services: ['Mold removal'], phone: '', website: '', sourceUrl: '', description: 'Independent contractor serving Newmarket.', example: false, subscription: 'pending', trialEndsAt: null, membership: { status: 'pending', amount: 100, currency: 'CAD', interval: 'month', simulated: true } };
+      const company = { id: randomUUID(), name, initials: name.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase(), city: 'Ontario', postalCode: servicePostalCode, notificationsEnabled: true, services: ['Mold removal'], phone: '', website: '', sourceUrl: '', description: 'Independent Ontario contractor.', example: false, subscription: 'pending', trialEndsAt: null, membership: { status: 'pending', amount: 100, currency: 'CAD', interval: 'month', simulated: true } };
       records.companies.push(company);
       records.accounts.push({ email, passwordHash, salt, companyId: company.id });
       return company;
@@ -201,10 +219,10 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
         const lastDay = new Date(Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth() + 1, 0)).getUTCDate(); periodEnd.setUTCDate(Math.min(day, lastDay));
         item.subscription = 'active';
         item.membership = { status: 'paid_demo', amount: 100, currency: 'CAD', interval: 'month', simulated: true, paidAt: paidAt.toISOString(), periodEnd: periodEnd.toISOString(), receiptId: `DEMO-${randomUUID().slice(0, 8).toUpperCase()}` };
-        for (const report of records.reports) if (report.status === 'shared' && report.broadcastAt && report.city === item.city && !report.selectedQuoteId && !report.recipientIds.includes(item.id)) report.recipientIds.push(item.id);
+        for (const report of records.reports) if (report.isSample && item.example && report.status === 'shared' && report.broadcastAt && !item.retired && withinRadius(report.demoLocation || demoLocations[0], item.demoLocation) && !report.selectedQuoteId && !report.recipientIds.includes(item.id)) report.recipientIds.push(item.id);
       }
       return item;
-    }); res.json({ company: updated });
+    }); await requestMatching(); res.json({ company: updated });
   }));
   app.get('/api/marketplace/reports', route(async (req, res) => {
     await queue;
@@ -219,10 +237,14 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
     const areas = labels.map(label => text(label, 'an affected area', 80));
     if (new Set(areas.map(areaId)).size !== areas.length || areas.some(label => !areaId(label))) throw new HttpError(400, 'Each project area must be unique.');
     const area = areas.join(', ');
+    const testPostal = postalCode(req.body.postalCode || demoLocations[0].postalCode);
+    let testLocation = demoLocations.find(location => location.postalCode === testPostal);
+    if (!testLocation) { const found = await directory.locate(testPostal); testLocation = { city: 'Ontario', postalCode: testPostal, ...found }; }
     const description = text(req.body.description || 'Dark spotting near the basement window after a small leak. Looking for an inspection and advice on next steps.', 'a description');
     const report = await mutate(records => {
       const autoShare = req.body.autoShare === true;
-      const report = { id: `MLR-${randomUUID().slice(0, 8).toUpperCase()}`, customerOwnerHash: owner.hash, city: 'Newmarket', area, projectAreas: areas.map(label => ({ id: areaId(label), label, description: '', findings: [] })), description, createdAt: now(), isSample: true, status: autoShare ? 'shared' : 'draft', recipientIds: autoShare ? records.companies.filter(company => active(company) && company.city === 'Newmarket').map(company => company.id) : [], selectedQuoteId: null, broadcastAt: autoShare ? now() : null };
+      const report = { id: `MLR-${randomUUID().slice(0, 8).toUpperCase()}`, customerOwnerHash: owner.hash, city: testLocation.city, postalCode: testPostal, demoLocation: { lat: testLocation.lat, lng: testLocation.lng }, demoUsername: records.demoCustomers?.[owner.hash]?.username || null, area, projectAreas: areas.map(label => ({ id: areaId(label), label, description: '', findings: [] })), description, createdAt: now(), isSample: true, status: autoShare ? 'shared' : 'draft', recipientIds: [], selectedQuoteId: null, broadcastAt: autoShare ? now() : null };
+      if (autoShare) report.recipientIds = sampleRecipients(records, report);
       records.reports.unshift(report); return view(records, report);
     });
     owner.save(res); res.status(201).json(report);
@@ -232,7 +254,7 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
     const report = await mutate(records => {
       const report = findReport(records, req.params.id); access(req, report, null);
       if (report.status !== 'draft') return view(records, report);
-      report.recipientIds = records.companies.filter(company => active(company) && company.city.toLowerCase() === report.city.toLowerCase()).map(company => company.id);
+      report.recipientIds = report.isSample ? sampleRecipients(records, { ...report, demoLocation: report.demoLocation || demoLocations[0] }) : [];
       if (!report.recipientIds.length) throw new HttpError(409, 'No subscribed contractors are available in this area yet.');
       report.status = 'shared'; report.broadcastAt = now();
       return view(records, report);
@@ -350,29 +372,132 @@ export async function registerMarketplace(app, { dataDirectory, auth, ownsScreen
       return view(records, report, company);
     }));
   }));
+  const lookupCooldown = new Map();
+  async function locateSafely(code) {
+    if (!code || !directory.configured || (lookupCooldown.get(code) || 0) > Date.now()) return null;
+    try { return await directory.locate(code); }
+    catch { lookupCooldown.set(code, Date.now() + 60000); return null; }
+  }
+  async function matchReport(id) {
+    await queue;
+    const report = state.reports.find(r => r.id === id);
+    if (!report || report.isSample || report.status !== 'shared' || report.selectedQuoteId) return;
+    const demoPoint = report.demoProject && demoLocations.find(location => location.postalCode === report.postalCode);
+    const centre = demoPoint || await locateSafely(report.postalCode);
+    const candidates = [];
+    let unresolved = false;
+    if (centre) for (const company of state.companies.filter(c => active(c) && !c.retired && (report.demoProject ? c.example : !c.example) && c.postalCode)) {
+      const location = report.demoProject ? company.demoLocation : await locateSafely(company.postalCode);
+      if (!location) unresolved = true;
+      if (withinRadius(centre, location)) candidates.push(company.id);
+    }
+    const matchStatus = !centre || unresolved ? 'pending_location' : candidates.length ? 'matched' : 'no_contractors';
+    const needsInvitation = candidates.some(id => state.companies.find(c => c.id === id)?.notificationsEnabled && state.accounts.some(a => a.companyId === id) && !(state.emailOutbox || []).some(e => e.reportId === report.id && e.companyId === id));
+    if (report.matchStatus === matchStatus && candidates.every(id => report.recipientIds.includes(id)) && !needsInvitation) return;
+    await mutate(records => {
+      const current = records.reports.find(r => r.id === id);
+      if (!current || current.status !== 'shared' || current.selectedQuoteId) return;
+      // Preserve prior access/quotes, but only deliver new invitations to currently eligible companies.
+      for (const companyId of candidates) {
+        const company = records.companies.find(c => c.id === companyId);
+        if (active(company) && !current.recipientIds.includes(companyId)) current.recipientIds.push(companyId);
+      }
+      current.matchStatus = matchStatus;
+      if (candidates.length) current.broadcastAt ||= now();
+      enqueueInvitations(records, { ...current, recipientIds: candidates });
+    });
+  }
+  let processing;
+  async function reconcile() {
+    if (processing) return processing;
+    processing = (async () => {
+      await queue;
+      for (const report of state.reports.filter(r => !r.isSample && r.status === 'shared' && !r.selectedQuoteId)) await matchReport(report.id);
+      await queue;
+      for (const item of state.emailOutbox || []) {
+        if (!['pending', 'waiting_setup'].includes(item.status) || Date.parse(item.nextAttemptAt) > Date.now()) continue;
+        if (!sender.ready) {
+          if (item.status !== 'waiting_setup') await mutate(records => { const entry = records.emailOutbox.find(e => e.id === item.id); entry.status = 'waiting_setup'; entry.error = 'email_configuration_required'; });
+          continue;
+        }
+        const report = state.reports.find(r => r.id === item.reportId);
+        const company = state.companies.find(c => c.id === item.companyId);
+        const account = state.accounts.find(a => a.companyId === item.companyId);
+        if (!report || !active(company) || !company.notificationsEnabled || report.selectedQuoteId || report.status !== 'shared') continue;
+        // Recheck both positions before sending queued mail (including after a profile move).
+        if (!withinRadius(await locateSafely(report.postalCode), await locateSafely(company.postalCode))) continue;
+        if (item.firstAttemptAt && Date.now() - Date.parse(item.firstAttemptAt) >= 23 * 60 * 60 * 1000) {
+          await mutate(records => { const entry = records.emailOutbox.find(e => e.id === item.id); entry.status = 'needs_review'; entry.error = 'delivery_window_elapsed'; }); continue;
+        }
+        await mutate(records => { const entry = records.emailOutbox.find(e => e.id === item.id); entry.attempts++; entry.firstAttemptAt ||= now(); entry.to = account.email; entry.content ||= sender.prepare({ ...entry, to: account.email }, report); });
+        try {
+          const stored = state.emailOutbox.find(e => e.id === item.id);
+          const outcome = await sender.send(stored, report);
+          await mutate(records => Object.assign(records.emailOutbox.find(e => e.id === item.id), outcome, { error: null }));
+        } catch (error) {
+          await mutate(records => {
+            const entry = records.emailOutbox.find(e => e.id === item.id);
+            entry.error = ['email_configuration_required', 'email_provider_rejected'].includes(error.message) ? error.message : 'email_delivery_retry';
+            entry.status = entry.attempts >= 8 || entry.error === 'email_provider_rejected' ? 'needs_review' : 'pending';
+            entry.nextAttemptAt = new Date(Date.now() + Math.min(3600000, 60000 * 2 ** (entry.attempts - 1))).toISOString();
+          });
+        }
+      }
+    })().finally(() => { processing = null; });
+    return processing;
+  }
+  const rates = new Map();
+  const limited = req => {
+    const time = Date.now(); const previous = rates.get(req.ip) || [];
+    const recent = previous.filter(t => t > time - 60000);
+    if (recent.length >= 4) throw new HttpError(429, 'Please wait a minute before searching again.');
+    if (rates.size > 5000) rates.clear();
+    rates.set(req.ip, [...recent, time]);
+  };
+  app.get('/api/marketplace/directory/status', route((_req, res) => res.json({ configured: directory.googleConfigured, radiusKm: 50, emailMode: sender.mode, emailReady: sender.ready })));
+  app.get('/api/marketplace/directory', route(async (req, res) => { limited(req); res.setHeader('Cache-Control', 'no-store'); res.json(await directory.search(req.query.postalCode)); }));
+  app.get('/api/marketplace/directory/:id/reviews', route(async (req, res) => { limited(req); res.setHeader('Cache-Control', 'no-store'); res.json(await directory.reviews(req.params.id)); }));
+  app.post('/api/marketplace/company-profile', route(async (req, res) => {
+    const company = requirePartner(req);
+    if (company.example) throw new HttpError(400, 'Create a company account to configure real screening invitations.');
+    const code = postalCode(req.body.postalCode);
+    if (typeof req.body.notificationsEnabled !== 'boolean') throw new HttpError(400, 'Choose an email invitation preference.');
+    const googlePlaceId = req.body.googlePlaceId === undefined ? company.googlePlaceId || null : req.body.googlePlaceId;
+    if (googlePlaceId !== null && (typeof googlePlaceId !== 'string' || !await directory.known(googlePlaceId))) throw new HttpError(400, 'Choose your business from the Google directory first.');
+    const updated = await mutate(records => { const current = records.companies.find(c => c.id === company.id); current.googlePlaceId = googlePlaceId; current.postalCode = code; current.notificationsEnabled = req.body.notificationsEnabled; return current; });
+    await requestMatching(); res.json({ company: updated });
+  }));
+  app.get('/api/marketplace/invitations', route(async (req, res) => {
+    const company = requirePartner(req); await queue;
+    res.json({ mode: sender.mode, ready: sender.ready, invitations: (state.emailOutbox || []).filter(e => e.companyId === company.id).map(e => ({ id: e.id, reportId: e.reportId, status: e.status, to: e.to, createdAt: e.createdAt, sentAt: e.sentAt, error: e.error, ...(e.status === 'preview' ? { preview: e.content || invitationContent(e, state.reports.find(r => r.id === e.reportId), emailOptions) } : {}) })) });
+  }));
   async function syncScreening(input) {
-    // This is a trusted server callback. No client-provided owner or screening ID is accepted.
+    // Only trusted screening callbacks can publish a real project.
     if (!input.customerOwnerHash || !input.sharingAllowed) return;
     await queue;
     const ready = input.reportAvailable && ['ready_preview', 'inconclusive'].includes(input.status);
-    const snapshot = { screening: { id: input.id, reference: input.reference, status: input.status, reportAvailable: Boolean(input.reportAvailable) }, area: input.area, projectAreas: input.projectAreas || projectAreas({ area: input.area }), description: input.description, summary: input.summary || '', summaryPoints: input.summaryPoints || [], recommendations: input.recommendations || [], findings: input.findings || [], city: input.city };
+    const snapshot = { screening: { id: input.id, reference: input.reference, status: input.status, reportAvailable: Boolean(input.reportAvailable) }, area: input.area, projectAreas: input.projectAreas || projectAreas({ area: input.area }), description: input.description, summary: input.summary || '', summaryPoints: input.summaryPoints || [], recommendations: input.recommendations || [], findings: input.findings || [], city: 'Ontario', postalCode: input.postalCode || '', demoProject: Boolean(state.demoCustomers?.[input.customerOwnerHash]), demoUsername: state.demoCustomers?.[input.customerOwnerHash]?.username || null };
     const id = `SCREEN-${input.id}`;
     const current = state.reports.find(report => report.id === id);
-    if (current && Object.entries(snapshot).every(([key, value]) => JSON.stringify(current[key]) === JSON.stringify(value)) && (!ready || current.broadcastAt || !state.companies.some(company => active(company) && company.city === input.city))) return;
-    return mutate(records => {
+    const changed = !current || Object.entries(snapshot).some(([key, value]) => JSON.stringify(current[key]) !== JSON.stringify(value)) || ready && current.status === 'processing';
+    if (changed) await mutate(records => {
       let report = records.reports.find(report => report.id === id);
-      if (!report) {
-        report = { id, customerOwnerHash: input.customerOwnerHash, createdAt: input.createdAt || now(), isSample: false, status: 'processing', recipientIds: [], selectedQuoteId: null, broadcastAt: null };
-        records.reports.unshift(report);
-      }
+      if (!report) { report = { id, customerOwnerHash: input.customerOwnerHash, createdAt: input.createdAt || now(), isSample: false, status: 'processing', recipientIds: [], selectedQuoteId: null, broadcastAt: null }; records.reports.unshift(report); }
       Object.assign(report, snapshot);
-      if (ready && !report.broadcastAt) {
-        report.recipientIds = records.companies.filter(company => active(company) && company.city === input.city).map(company => company.id);
-        report.status = 'shared';
-        if (report.recipientIds.length) report.broadcastAt = now();
-      }
+      if (ready && report.status === 'processing') { report.status = 'shared'; report.matchStatus = 'pending_location'; }
       return report.id;
     });
+    if (ready && changed) await requestMatching();
+    return id;
   }
-  return { filename, syncScreening };
+  let timer;
+  function requestMatching() {
+    if (!timer) return reconcile();
+    // Keep provider lookups and email latency out of screening/API responses.
+    void reconcile().catch(() => console.error('Contractor matching retry required.'));
+  }
+  return { filename, syncScreening, runJobs: reconcile,
+    start() { if (!timer) { timer = setInterval(() => { void reconcile().catch(() => console.error('Contractor matching retry required.')); }, 30000); timer.unref(); void reconcile().catch(() => {}); } },
+    async stop() { clearInterval(timer); timer = null; await processing; await queue; await directory.close(); }
+  };
 }

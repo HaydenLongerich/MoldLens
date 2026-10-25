@@ -4,7 +4,7 @@ import { createApp, projectDirectory } from './app.mjs';
 
 const port = Number(process.env.PORT || 5173);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid port number.');
-const { app, auth, store, screening } = await createApp({ screeningOptions: {} });
+const { app, auth, store, screening, marketplace } = await createApp({ screeningOptions: {} });
 const setupCode = await auth.getSetupCode();
 let vite;
 if (process.env.NODE_ENV === 'production') {
@@ -30,6 +30,7 @@ if (process.env.NODE_ENV === 'production') {
 
 const server = app.listen(port, '127.0.0.1', () => {
   screening.start();
+  marketplace.start();
   console.log(`\n  MoldLens · local demo\n  http://127.0.0.1:${port}\n`);
   if (setupCode) console.log(`  Create the first staff account at http://127.0.0.1:${port}/#login\n  One-time setup code: ${setupCode}\n`);
 });
@@ -38,6 +39,7 @@ let stopping;
 const shutdown = () => stopping ??= (async () => {
   await new Promise(resolve => server.close(resolve));
   await screening.stop();
+  await marketplace.stop();
   await vite?.close();
 })();
 server.on('error', (error) => { console.error(`Could not start the local server: ${error.code || 'server error'}`); process.exitCode = 1; void shutdown(); });

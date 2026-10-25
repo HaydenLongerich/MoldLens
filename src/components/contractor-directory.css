@@ -1,0 +1,21 @@
+.contractor-directory { border-top: 1px solid var(--border); padding: 20px 0; margin: 20px 0; }
+.directory-heading, .directory-business-heading, .directory-business-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.directory-heading strong, .directory-business-heading strong { font-size: 14px; font-weight: 550; }
+.contractor-directory p, .contractor-notifications p { font-size: 12px; line-height: 1.7; }
+.contractor-directory .directory-note, .directory-note { color: var(--muted); font-size: 11px; line-height: 1.7; }
+.directory-results { max-height: 480px; overflow-y: auto; overscroll-behavior: contain; }
+.directory-results > article { border-top: 1px solid var(--border); padding: 18px 0; }
+.directory-business-actions, .directory-business-heading span { font-size: 11px; }
+.directory-business-actions button { min-height: 44px; border: 0; background: transparent; color: var(--accent); text-decoration: underline; }
+.google-attribution { font-family: Arial, sans-serif; font-weight: 400; font-style: normal; font-size: 14px !important; letter-spacing: normal; white-space: nowrap; color: #1f1f1f; }
+.directory-reviews article, .invitation-preview { padding: 14px 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.directory-reviews article > a { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.directory-reviews img { width: 28px; height: 28px; border-radius: 50%; }
+.directory-reviews span { display: block; margin-top: 8px; font-size: 11px; }
+.contractor-notifications { margin-bottom: 20px; }
+.contractor-notifications form { display: grid; gap: 14px; max-width: 520px; }
+.contractor-notifications form > label:not(.market-check) { display: grid; gap: 8px; font-size: 12px; }
+.contractor-notifications input:not([type=checkbox]) { min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); width: 100%; }
+.contractor-notifications summary { cursor: pointer; min-height: 44px; font-size: 13px; }
+.invitation-text { white-space: pre-wrap; }
+@media (max-width: 480px) { .directory-heading { align-items: stretch; flex-direction: column; } .directory-heading .btn { width: 100%; } }

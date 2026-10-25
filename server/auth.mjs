@@ -7,6 +7,7 @@ import { HttpError } from './validation.mjs';
 const scrypt = promisify(scryptCallback);
 const STAFF_COOKIE = 'moldlens_staff';
 const CUSTOMER_COOKIE = 'moldlens_customer';
+const DEMO_COOKIE = 'moldlens_demo_customer';
 const SESSION_MS = 8 * 60 * 60 * 1000;
 const CUSTOMER_MS = 90 * 24 * 60 * 60 * 1000;
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
@@ -173,7 +174,12 @@ export async function createAuth(dataDirectory, { setupCode: suppliedSetupCode, 
     return startSession(request, response);
   }
 
+  let demoResolver = () => null;
+  const demoAllowed = request => process.env.NODE_ENV !== 'production' && ['localhost', '127.0.0.1', '[::1]'].includes(request.hostname);
+  function demoSessionHash(request) { const token = demoAllowed(request) && cookieToken(request, DEMO_COOKIE); return token ? hash(token) : null; }
   function customerHash(request) {
+    const demoOwner = demoResolver(demoSessionHash(request));
+    if (demoOwner) return demoOwner;
     const token = cookieToken(request, CUSTOMER_COOKIE);
     return token ? hash(token) : null;
   }
@@ -185,6 +191,10 @@ export async function createAuth(dataDirectory, { setupCode: suppliedSetupCode, 
 
   return {
     state, setup, login, userForRequest, owns, getCustomerHash: customerHash,
+    setDemoCustomerResolver(resolve) { demoResolver = resolve; },
+    getDemoSessionHash: demoSessionHash,
+    clearDemoSession(request, response) { response.clearCookie(DEMO_COOKIE, cookieOptions(request, undefined)); },
+    saveDemoSession(request, response, token) { if (!demoAllowed(request)) throw new HttpError(404, 'Demo unavailable.'); response.cookie(DEMO_COOKIE, token, cookieOptions(request, 7 * 24 * 60 * 60 * 1000)); },
     async getSetupCode() { return await readAccount() ? null : setupCode; },
     requireStaff(request, _response, next) {
       if (!userForRequest(request)) return next(new HttpError(401, 'Please sign in to access the staff dashboard.'));
@@ -196,6 +206,8 @@ export async function createAuth(dataDirectory, { setupCode: suppliedSetupCode, 
       return { user: null, setupRequired: !account };
     },
     customerIdentity(request) {
+      const demoHash = demoResolver(demoSessionHash(request));
+      if (demoHash) return { hash: demoHash, save() {} };
       const token = cookieToken(request, CUSTOMER_COOKIE) ?? randomBytes(32).toString('hex');
       return {
         hash: hash(token),

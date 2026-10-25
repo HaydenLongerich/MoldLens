@@ -9,7 +9,7 @@ import { confirmedQuote } from './proposal-fixtures.mjs';
 
 async function workspace(callback, activate = true) {
   const dataDirectory = await mkdtemp(path.join(os.tmpdir(), 'moldlens-market-'));
-  try { const app = (await createApp({ dataDirectory, seeds: [] })).app; if (activate) for (const id of ['moldtech', 'aro', 'desa']) await demo(app, id); await callback(app, dataDirectory); }
+  try { const app = (await createApp({ dataDirectory, seeds: [] })).app; if (activate) for (const id of ['moldtech', 'kleen', 'moldguy']) await demo(app, id); await callback(app, dataDirectory); }
   finally { await rm(dataDirectory, { recursive: true, force: true }); }
 }
 const post = (app, route, body = {}, cookie = '') => dispatch(app, withCookie(jsonRequest('POST', `/api/marketplace${route}`, body), cookie));
@@ -32,16 +32,16 @@ const quote = confirmedQuote();
 
 test('reports require consent and broadcast once to all active companies in the area', () => workspace(async app => {
   const { report, customer } = await sample(app);
-  const aro = await demo(app, 'aro');
+  const aro = await demo(app, 'kleen');
   assert.equal((await post(app, '/subscription', { status: 'paused' }, aro)).status, 200);
   assert.equal((await post(app, `/reports/${report.id}/broadcast`, {}, customer)).status, 400);
   assert.equal((await get(app, '/reports?role=partner', aro)).status, 403);
   const shared = await post(app, `/reports/${report.id}/broadcast`, { consent: true }, customer);
-  assert.deepEqual(shared.json().recipientIds, ['moldtech', 'desa']);
+  assert.deepEqual(shared.json().recipientIds, ['moldtech', 'moldguy']);
   assert.equal(shared.json().customerOwnerHash, undefined);
   await post(app, '/subscription', { status: 'active' }, aro);
   const again = await post(app, `/reports/${report.id}/broadcast`, { consent: true }, customer);
-  assert.deepEqual(again.json().recipientIds, ['moldtech', 'desa']);
+  assert.deepEqual(again.json().recipientIds, ['moldtech', 'moldguy']);
   assert.equal((await get(app, '/reports?role=partner', aro)).json().length, 0);
   assert.equal((await post(app, `/reports/${report.id}/quote`, quote, aro)).status, 404);
 }));
@@ -53,7 +53,7 @@ test('customer and company isolation, quote updates, selection and two-way messa
   assert.equal((await get(app, '/reports')).json().length, 0);
   assert.equal((await get(app, '/reports?role=partner')).status, 401);
   await post(app, `/reports/${report.id}/broadcast`, { consent: true }, customer);
-  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'aro');
+  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'kleen');
   const quoted = await post(app, `/reports/${report.id}/quote`, quote, moldtech);
   assert.equal(quoted.status, 201, quoted.body.toString());
   const quoteId = quoted.json().quotes[0].id;
@@ -63,7 +63,7 @@ test('customer and company isolation, quote updates, selection and two-way messa
   assert.equal(updated.json().quotes[0].id, quoteId);
   assert.equal(updated.json().quotes[0].amount, 310);
   assert.equal((await post(app, `/reports/${report.id}/messages`, { companyId: 'moldtech', text: 'Can you come Tuesday?' }, customer)).status, 201);
-  assert.equal((await post(app, `/reports/${report.id}/messages`, { role: 'partner', companyId: 'aro', text: 'Tuesday works.' }, moldtech)).status, 201);
+  assert.equal((await post(app, `/reports/${report.id}/messages`, { role: 'partner', companyId: 'kleen', text: 'Tuesday works.' }, moldtech)).status, 201);
   const privateView = (await get(app, '/reports?role=partner', moldtech)).json()[0];
   assert.equal(privateView.messages.length, 2);
   assert.equal(privateView.messages[1].companyId, 'moldtech');
@@ -95,7 +95,7 @@ test('membership gates quoting, samples are idempotent, and invalid quotes are r
 }));
 
 test('company registration, credentials, logout and company data survive server restart', () => workspace(async (app, dataDirectory) => {
-  const input = { name: 'Newmarket Test Company', email: 'owner@example.test', password: 'test-password-long' };
+  const input = { name: 'Newmarket Test Company', email: 'owner@example.test', password: 'test-password-long', postalCode: 'L3Y 1A1', notificationsEnabled: true };
   const registered = await post(app, '/register', input);
   assert.equal(registered.status, 201, registered.body.toString());
   assert.equal(registered.json().company.subscription, 'pending');
@@ -117,7 +117,7 @@ test('company registration, credentials, logout and company data survive server 
   assert.equal((await post(restarted, '/membership/demo-pay', { confirm: true }, cookieHeader(login))).status, 200);
   const { report, customer } = await sample(restarted);
   const shared = await post(restarted, `/reports/${report.id}/broadcast`, { consent: true }, customer);
-  assert.equal(shared.json().recipientIds.length, 4);
+  assert.equal(shared.json().recipientIds.length, 3);
 }));
 
 test('production disables demo identities, sample replies and membership toggles', () => workspace(async app => {
@@ -144,7 +144,7 @@ test('three areas stay one project, require whole-project coverage, and use one 
   await post(app, '/customer-contact', { email: 'project@example.test', phone: '905-555-0123' }, customer);
   assert.equal(report.projectAreas.length, 3);
   assert.equal((await get(app, '/reports', customer)).json().length, 1);
-  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'aro');
+  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'kleen');
   assert.equal((await get(app, '/reports?role=partner', moldtech)).json().length, 1);
   const ids = report.projectAreas.map(area => area.id);
   const values = { ...confirmedQuote(600, ids), breakdown: [{ areaId: ids[0], amount: 200 }, { areaId: ids[1], amount: 250 }, { areaId: ids[2], amount: 150 }] };
@@ -178,7 +178,7 @@ test('bid declines, quote decisions and private reversible archives persist and 
   const { report, customer } = await sample(app);
   const outsider = await sample(app);
   await post(app, `/reports/${report.id}/broadcast`, { consent: true }, customer);
-  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'aro');
+  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'kleen');
   const response = action => post(app, `/reports/${report.id}/response`, { action }, moldtech);
   assert.equal((await response('bogus')).status, 400);
   assert.equal((await post(app, `/reports/${report.id}/response`, { action: 'decline' }, customer)).status, 401);
@@ -241,7 +241,7 @@ test('bid declines, quote decisions and private reversible archives persist and 
 test('account-free contact gates quotes, reaches only the chosen company, and removed screenings restore privately', () => workspace(async (app, dataDirectory) => {
   const created = await post(app, '/reports', { area: 'Basement', description: 'Contact gate fixture.', autoShare: true });
   const customer = cookieHeader(created); const report = created.json();
-  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'aro');
+  const moldtech = await demo(app, 'moldtech'); const aro = await demo(app, 'kleen');
   const quoted = await post(app, `/reports/${report.id}/quote`, quote, moldtech);
   const quoteId = quoted.json().quotes[0].id;
   const locked = (await get(app, '/reports', customer)).json()[0];
@@ -331,7 +331,7 @@ test('itemized proposal totals, tax, deposits, assessment requirements and dates
 
 test('a free assessment request keeps the project open, preserves its original offer, and leads to a confirmed work quote', () => workspace(async (app, dataDirectory) => {
   const { report, customer } = await sample(app); await post(app, `/reports/${report.id}/broadcast`, { consent: true }, customer);
-  const contractor = await demo(app, 'moldtech'); const other = await demo(app, 'aro');
+  const contractor = await demo(app, 'moldtech'); const other = await demo(app, 'kleen');
   const assessment = confirmedQuote(0, ['basement'], { proposalKind: 'assessment', assessmentBasis: 'screening', assessedOn: null });
   const offered = await post(app, `/reports/${report.id}/quote`, assessment, contractor);
   assert.equal(offered.status, 201, offered.body.toString()); const quoteId = offered.json().quotes[0].id;

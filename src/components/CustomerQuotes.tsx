@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Check, MessageCircle } from 'lucide-react';
 import { areasOf, cad, coversProject, quoteAvailable, proposalLabel, proposalExpired, type MarketReport } from '../lib/marketplace';
 import { ProposalDetails } from './ProjectQuoteForm';
+import { Reviews } from './ContractorDirectory';
 
 type QuoteAction = 'decline' | 'undo-decline' | 'archive' | 'restore';
 export default function CustomerQuotes({ report, busy, onAction, onChoose, onMessage }: {
   report: MarketReport; busy: boolean; onAction: (id: string, action: QuoteAction) => void;
   onChoose: (id: string) => void; onMessage: (companyId: string) => void;
 }) {
+  const [reviewCompany, setReviewCompany] = useState<string | null>(null);
   const [archived, setArchived] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
   const archivedCount = report.quotes.filter(quote => quote.archivedAt).length;
@@ -22,7 +24,7 @@ export default function CustomerQuotes({ report, busy, onAction, onChoose, onMes
       const available = quoteAvailable(quote);
       return <article className={`market-panel market-quote-card${chosen ? ' is-chosen' : ''}${!available ? ' is-inactive' : ''}`} key={quote.id}>
         <header><h3>{contractor?.name}</h3>{chosen || requested ? <span className="market-chosen"><Check size={14} />{chosen ? 'Chosen' : 'Follow-up requested'}</span> : (quote.declinedAt || quote.withdrawnAt || proposalExpired(quote)) && <span className="market-status">{quote.withdrawnAt ? 'Withdrawn' : quote.declinedAt ? 'Declined' : 'Expired'}</span>}</header>
-        <p className="project-quote-label">{coversProject(report, quote) ? `Entire project · ${areas.length} area${areas.length === 1 ? '' : 's'}` : 'Coverage needs confirmation'}</p>
+        <>{contractor?.googlePlaceId && <div><button type="button" className="market-text-button" aria-expanded={reviewCompany === contractor.id} onClick={() => setReviewCompany(reviewCompany === contractor.id ? null : contractor.id)}>Google ratings & reviews</button><p className="market-small">Business profile linked by this contractor.</p>{reviewCompany === contractor.id && <Reviews placeId={contractor.googlePlaceId} />}</div>}</><p className="project-quote-label">{coversProject(report, quote) ? `Entire project · ${areas.length} area${areas.length === 1 ? '' : 's'}` : 'Coverage needs confirmation'}</p>
         <div className="market-quote-price">{quote.amount === 0 ? 'Free' : cad(quote.amount)}<small>{proposalLabel(quote)} · CAD · {quote.proposalVersion ? quote.taxMode === 'none' ? 'No tax charged' : 'Includes HST' : quote.taxIncluded ? 'Tax included' : 'Plus tax'}{quote.simulated ? ' · Sample' : ''}</small></div>
         {quote.proposalKind === 'estimate' && <p className="market-small">Indicative pricing, subject to contractor assessment. This is not a confirmed work price.</p>}
         {quote.proposalKind === 'assessment' && <p className="market-small">Assessment visit only. Remediation work needs a separate proposal.</p>}
