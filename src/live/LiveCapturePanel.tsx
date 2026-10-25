@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { toDataURL } from 'qrcode';
-import { ImagePlus, LoaderCircle, QrCode, Smartphone } from 'lucide-react';
-import { LiveApiError, liveApi, liveSocketUrl, type LiveAnalysis, type LiveDetection, type LiveSession, type LiveState } from '../lib/live-api';
+import { Camera, ImagePlus, LoaderCircle, QrCode, Smartphone } from 'lucide-react';
+import { LiveApiError, liveApi, liveSocketUrl, type LiveSession, type LiveSnapshot, type LiveState } from '../lib/live-api';
+import { LiveCamera } from './PhoneCapturePage';
 import './live.css';
-
-interface ChatItem { id: number; from: 'assistant' | 'system'; text: string }
 
 function message(error: unknown) { return error instanceof Error ? error.message : 'Something went wrong. Please try again.'; }
 
@@ -13,23 +12,38 @@ function isSecureForPhone(origin: string) {
   return origin.startsWith('https://') || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(origin);
 }
 
-export default function LiveCapturePanel({ disabled, onSnapshots }: { disabled: boolean; onSnapshots: (files: File[]) => Promise<void> }) {
+// The camera is only offered where the browser will actually open it.
+const canUseCamera = window.isSecureContext && Boolean(navigator.mediaDevices?.getUserMedia);
+// Phones and tablets lead with their own camera; desktops lead with the phone code.
+const touchFirst = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+
+interface PanelProps {
+  disabled: boolean;
+  // Until both permissions are ticked, the buttons stay clickable and call `onLocked`, which
+  // points the customer at the permission boxes the same way the upload button does.
+  locked: boolean;
+  onLocked: () => void;
+  onSnapshots: (files: File[]) => Promise<void>;
+  // Creates the screening draft if needed, so the camera works before "Save draft".
+  prepare: () => Promise<unknown>;
+}
+
+const Divider = () => <div className="live-or" role="separator" aria-label="or"><span>or</span></div>;
+
+// Camera guidance lives on the camera screen only. This panel pairs the phone and collects its photos.
+export default function LiveCapturePanel({ disabled, locked, onLocked, onSnapshots, prepare }: PanelProps) {
   const [session, setSession] = useState<LiveSession | null>(null);
+  const [deviceMode, setDeviceMode] = useState(false);
+  const [notice, setNotice] = useState('');
   const [state, setState] = useState<LiveState | null>(null);
   const [qr, setQr] = useState('');
   const [pairUrl, setPairUrl] = useState('');
-  const [preview, setPreview] = useState('');
-  const [detections, setDetections] = useState<LiveDetection[]>([]);
-  const [chat, setChat] = useState<ChatItem[]>([]);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [added, setAdded] = useState<string[]>([]);
   const [phoneConnected, setPhoneConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const previewUrl = useRef('');
   const thumbUrls = useRef<Record<string, string>>({});
-  const lastCode = useRef('');
-  const chatId = useRef(0);
 
   const sessionId = session?.id ?? '';
   const origin = session ? session.publicOrigin ?? window.location.origin : window.location.origin;
@@ -37,61 +51,30 @@ export default function LiveCapturePanel({ disabled, onSnapshots }: { disabled: 
   const snapshots = state?.snapshots ?? [];
   const pending = snapshots.filter((snap) => !added.includes(snap.id));
 
-  function push(from: ChatItem['from'], text: string) {
-    setChat((items) => [...items.slice(-29), { id: ++chatId.current, from, text }]);
-  }
-
-  function clearMedia() {
-    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
-    previewUrl.current = '';
+  function clearThumbs() {
     for (const url of Object.values(thumbUrls.current)) if (url !== 'pending') URL.revokeObjectURL(url);
     thumbUrls.current = {};
-    setPreview(''); setThumbs({});
-  }
-
-  function showFrame(blob: Blob) {
-    const next = URL.createObjectURL(blob);
-    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
-    previewUrl.current = next;
-    setPreview(next);
+    setThumbs({});
   }
 
   function resetSession() {
-    clearMedia();
-    setSession(null); setState(null); setQr(''); setPairUrl(''); setDetections([]); setChat([]); setAdded([]);
-    setPhoneConnected(false); lastCode.current = '';
+    clearThumbs();
+    setSession(null); setDeviceMode(false); setState(null); setQr(''); setPairUrl(''); setAdded([]);
+    setPhoneConnected(false);
   }
 
-  useEffect(() => () => clearMedia(), []);
+  useEffect(() => () => clearThumbs(), []);
 
-  // Desktop socket: preview frames arrive as binary, analysis and phone status as JSON.
+  // Desktop socket: phone status and new photos only.
   useEffect(() => {
     if (!sessionId) return;
     const socket = new WebSocket(liveSocketUrl(sessionId, 'desktop'));
-    socket.binaryType = 'blob';
     socket.onmessage = (event) => {
-      if (typeof event.data !== 'string') { showFrame(event.data); return; }
+      if (typeof event.data !== 'string') return;
       const data = JSON.parse(event.data);
-      if (data.type === 'hello') {
-        setPhoneConnected(data.phoneConnected);
-        if (!data.detector.ready) push('system', 'Framing guidance needs the detection model, which is not installed yet. Lighting and focus checks still work.');
-      }
-      if (data.type === 'phone') {
-        setPhoneConnected(data.connected);
-        push('system', data.connected ? 'Phone connected. Guidance will appear here as you move the camera.' : 'Phone disconnected.');
-      }
-      if (data.type === 'analysis') {
-        const analysis = data as LiveAnalysis;
-        setDetections(analysis.detections);
-        if (analysis.code !== lastCode.current) {
-          lastCode.current = analysis.code;
-          push('assistant', analysis.message);
-        }
-      }
-      if (data.type === 'snapshot') {
-        push('system', `Photo ${data.count} of ${data.limit} taken on the phone.`);
-        liveApi.state(sessionId).then(setState).catch(() => {});
-      }
+      if (data.type === 'hello') setPhoneConnected(data.phoneConnected);
+      if (data.type === 'phone') setPhoneConnected(data.connected);
+      if (data.type === 'snapshot') liveApi.state(sessionId).then(setState).catch(() => {});
     };
     socket.onclose = (event) => {
       if (event.code === 4404) { resetSession(); setError('This live session has ended. Create a new code to try again.'); }
@@ -116,17 +99,19 @@ export default function LiveCapturePanel({ disabled, onSnapshots }: { disabled: 
     }
   }, [sessionId, snapshots]);
 
-  async function startSession() {
-    setBusy(true); setError('');
+  async function startSession(mode: 'phone' | 'device') {
+    if (locked) { onLocked(); return; }
+    setBusy(true); setError(''); setNotice('');
     try {
+      await prepare();
       const created = await liveApi.create();
       const link = `${created.publicOrigin ?? window.location.origin}/live/${created.id}#${created.token}`;
       setPairUrl(link);
-      setQr(await toDataURL(link, { margin: 1, width: 240 }));
+      if (mode === 'phone') setQr(await toDataURL(link, { margin: 1, width: 240 }));
       setSession(created);
+      setDeviceMode(mode === 'device');
       setState(null);
       setAdded([]);
-      setChat([{ id: ++chatId.current, from: 'system', text: 'Scan the code with your phone. Its camera will open here once it connects.' }]);
     } catch (cause) {
       setError(cause instanceof LiveApiError && cause.status === 403 ? cause.message : message(cause));
     } finally {
@@ -142,69 +127,94 @@ export default function LiveCapturePanel({ disabled, onSnapshots }: { disabled: 
     finally { resetSession(); setBusy(false); }
   }
 
+  // Downloads the photos and hands them to the screening's normal upload path.
+  async function addSnapshots(sessionKey: string, list: LiveSnapshot[]) {
+    const files: File[] = [];
+    for (const snap of list) {
+      const blob = await liveApi.photo(sessionKey, snap.id);
+      const extension = blob.type === 'image/png' ? 'png' : 'jpg';
+      files.push(new File([blob], `live-photo-${snap.id.slice(0, 8)}.${extension}`, { type: blob.type || 'image/jpeg' }));
+    }
+    await onSnapshots(files);
+    setAdded((items) => [...items, ...list.map((snap) => snap.id)]);
+    return `${files.length} photo${files.length === 1 ? '' : 's'} added to your screening.`;
+  }
+
   async function addToScreening() {
     if (!session || !pending.length) return;
     setBusy(true); setError('');
+    try { setNotice(await addSnapshots(session.id, pending)); }
+    catch (cause) { setError(message(cause)); }
+    finally { setBusy(false); }
+  }
+
+  // Closing the device camera adds whatever it took, then ends the session.
+  async function finishDevice() {
+    if (!session) return;
+    const current = session;
+    setDeviceMode(false);
+    setBusy(true); setError('');
     try {
-      const files: File[] = [];
-      for (const snap of pending) {
-        const blob = await liveApi.photo(session.id, snap.id);
-        const extension = blob.type === 'image/png' ? 'png' : 'jpg';
-        files.push(new File([blob], `live-photo-${snap.id.slice(0, 8)}.${extension}`, { type: blob.type || 'image/jpeg' }));
-      }
-      await onSnapshots(files);
-      setAdded((items) => [...items, ...pending.map((snap) => snap.id)]);
-      push('system', `${files.length} photo${files.length === 1 ? '' : 's'} added to your screening.`);
+      const fresh = await liveApi.state(current.id);
+      const taken = fresh.snapshots.filter((snap) => !added.includes(snap.id));
+      const summary = taken.length ? await addSnapshots(current.id, taken) : '';
+      await liveApi.end(current.id).catch(() => {});
+      resetSession();
+      setNotice(summary);
     } catch (cause) {
       setError(message(cause));
+      resetSession();
     } finally {
       setBusy(false);
     }
   }
 
   if (!session) {
-    return (
-      <section className="live-panel" aria-labelledby="live-heading">
-        <div className="live-intro"><Smartphone size={22} /><div>
-          <h3 id="live-heading">Use your phone as a live camera</h3>
-          <p>Scan a code with your phone. A guide will tell you when to move closer, back off, or hold steady, then take the photos for you.</p>
-        </div></div>
-        {error && <p className="live-error" role="alert">{error}</p>}
-        <button type="button" className="btn btn-secondary" disabled={disabled || busy} onClick={startSession}>
-          {busy ? <LoaderCircle size={16} className="live-spin" /> : <QrCode size={16} />} Show phone code
-        </button>
-        {disabled && <p className="screening-hint">Agree to AI processing and storage above to use the live camera.</p>}
-      </section>
+    const deviceButton = canUseCamera && (
+      <button type="button" className={touchFirst ? 'btn btn-primary' : 'btn btn-secondary'} disabled={disabled || busy} aria-disabled={locked} onClick={() => startSession('device')}>
+        <Camera size={16} /> Use this device's camera
+      </button>
     );
+    const phoneButton = (
+      <button type="button" className="btn btn-secondary" disabled={disabled || busy} aria-disabled={locked} onClick={() => startSession('phone')}>
+        {busy ? <LoaderCircle size={16} className="live-spin" /> : <QrCode size={16} />} {touchFirst ? 'Use a different phone' : 'Use phone camera'}
+      </button>
+    );
+    return (<>
+      <Divider />
+      <section className={locked ? 'live-panel is-locked' : 'live-panel'} aria-labelledby="live-heading">
+        <div className="live-intro"><Smartphone size={22} /><div>
+          <h3 id="live-heading">Use your camera</h3>
+          <p>On-screen tips help you get a clear photo.</p>
+        </div></div>
+        {notice && <p className="live-notice" role="status">{notice}</p>}
+        {error && <p className="live-error" role="alert">{error}</p>}
+        <div className="live-start-actions">{touchFirst ? <>{deviceButton}{phoneButton}</> : <>{phoneButton}{deviceButton}</>}</div>
+      </section>
+    </>);
   }
 
+  if (deviceMode) return <LiveCamera id={session.id} token={session.token} onDone={finishDevice} />;
+
   const insecure = !isSecureForPhone(origin);
-  return (
+  return (<>
+    <Divider />
     <section className="live-panel" aria-labelledby="live-heading">
-      <h3 id="live-heading">Live camera</h3>
+      <h3 id="live-heading">Phone camera</h3>
       {insecure && <p className="live-warning" role="alert">Phones can only open the camera over HTTPS. This address is not secure, so the phone will not start the camera.</p>}
-      <div className="live-body">
-        <div className="live-pairing">
-          {qr ? <img src={qr} alt="QR code to open the live camera on your phone" width={200} height={200} /> : null}
-          <p>{phoneConnected ? 'Phone connected' : 'Scan with your phone camera'}</p>
+      <div className="live-pairing">
+        {qr ? <img src={qr} alt="QR code to open the live camera on your phone" width={200} height={200} /> : null}
+        <div className="live-pairing-text">
+          <p className={phoneConnected ? 'live-status-line is-on' : 'live-status-line'}>
+            {phoneConnected ? 'Phone connected. Take photos on your phone.' : 'Scan with your phone camera.'}
+          </p>
           <details className="live-link">
             <summary>Can't scan? Copy the phone link</summary>
             <input readOnly value={pairUrl} aria-label="Phone link" onFocus={(event) => event.currentTarget.select()} />
           </details>
         </div>
-        <div className="live-stage-desktop">
-          <div className="live-preview">
-            {preview ? <img src={preview} alt="Live view from the phone" /> : <p className="live-muted">Waiting for the phone…</p>}
-            {detections.map((item, index) => (
-              <span key={index} className={item.clipped ? 'live-box is-clipped' : 'live-box'}
-                style={{ left: `${item.box.x * 100}%`, top: `${item.box.y * 100}%`, width: `${item.box.width * 100}%`, height: `${item.box.height * 100}%` }} />
-            ))}
-          </div>
-          <div className="live-chat" role="log" aria-live="polite">
-            {chat.map((item) => <p key={item.id} className={`live-bubble is-${item.from}`}>{item.text}</p>)}
-          </div>
-        </div>
       </div>
+      {notice && <p className="live-notice" role="status">{notice}</p>}
       {error && <p className="live-error" role="alert">{error}</p>}
       {snapshots.length > 0 && (
         <div className="live-thumbs" aria-label="Photos from the phone">
@@ -221,8 +231,8 @@ export default function LiveCapturePanel({ disabled, onSnapshots }: { disabled: 
         <button type="button" className="btn btn-secondary" disabled={disabled || busy || !pending.length} onClick={addToScreening}>
           <ImagePlus size={16} /> Add {pending.length || ''} photo{pending.length === 1 ? '' : 's'} to screening
         </button>
-        <button type="button" className="screening-text-button" disabled={busy} onClick={endSession}>End live camera</button>
+        <button type="button" className="screening-text-button" disabled={busy} onClick={endSession}>End phone camera</button>
       </div>
     </section>
-  );
+  </>);
 }

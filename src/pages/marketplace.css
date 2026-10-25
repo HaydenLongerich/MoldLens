@@ -133,7 +133,7 @@
 .minimal-mobile-nav a[aria-current=page] { color: #b43d13; }
 .screening-shell .screening-intro { margin-bottom: 25px; }
 .screening-sample-button { display: block; margin: 0 auto 18px; }
-.screening-form .screening-quotes-consent { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.7; margin: 24px 0; }
+.screening-form .screening-quotes-consent { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.7; margin: 0; }
 .screening-quotes-consent input { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
 .market-directory { max-width: 1000px; margin: 0 auto; }
 .market-directory-grid { display: grid; gap: 14px; }

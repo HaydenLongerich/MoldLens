@@ -154,7 +154,7 @@ test('desktop routes are owned by the screening customer and phone uploads need 
   assert.equal((await dispatch(app, withCookie({ url: `/api/live/sessions/${id}` }, cookie))).status, 404);
 }));
 
-test('a live socket round trip gives the phone guidance and the desktop preview and analysis', { timeout: 20000 }, async () => workspace(async ({ app, live }) => {
+test('a live socket round trip gives the phone guidance and sends the desktop no frames or guidance', { timeout: 20000 }, async () => workspace(async ({ app, live }) => {
   const cookie = await customerCookie(app);
   const create = await dispatch(app, withCookie({ method: 'POST', url: '/api/live/sessions' }, cookie));
   const { id, token } = create.json();
@@ -192,8 +192,8 @@ test('a live socket round trip gives the phone guidance and the desktop preview 
     const reply = JSON.parse(guidance.data);
     assert.equal(typeof reply.code, 'string');
     assert.equal(reply.autoCapture, false);
-    await waitFor(desktop.messages, ({ isBinary }) => isBinary);
-    await waitFor(desktop.messages, ({ data, isBinary }) => !isBinary && JSON.parse(data).type === 'analysis');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(desktop.messages.some(({ data, isBinary }) => isBinary || JSON.parse(data).type === 'analysis'), false, 'the desktop gets no frames or guidance');
 
     const wrong = await open(`${base}?session=${id}&role=phone`);
     wrong.socket.send(JSON.stringify({ type: 'hello', token: 'bad' }));

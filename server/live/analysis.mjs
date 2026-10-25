@@ -43,7 +43,7 @@ export function guidanceFor({ metrics, detections = [], detectorReady = false })
     if (main.clipped || side > LIMITS.backAboveSide) return { code: 'move_back', message: 'Move back a little so the whole stained area fits in the frame.' };
     if (side < LIMITS.closerBelowSide) return { code: 'move_closer', message: 'Move closer so the stained area fills more of the frame.' };
   }
-  return { code: 'ready', message: detectorReady ? 'Good framing and light. Hold still and I will take the photo.' : 'Lighting and focus look good. Hold still and I will take the photo.' };
+  return { code: 'ready', message: 'Looks good. Hold still.' };
 }
 
 // Letterbox keeps the aspect ratio. Padding offsets let detections be mapped

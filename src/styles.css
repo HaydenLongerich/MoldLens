@@ -29,6 +29,8 @@
   --action-bg: #f05924;
   --action-ink: #13201c;
   --heading: #1f2b28;
+  /* Palette orange deepened so small header text stays readable (5:1 on cream and white). */
+  --heading-accent: #bd3f0f;
   --ink: #1f2b28;
   --muted: #646d65;
   --border: #1f2b2826;

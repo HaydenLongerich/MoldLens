@@ -34,8 +34,21 @@ function frameBlob(video: HTMLVideoElement, maxSide: number, quality: number) {
   });
 }
 
+// The /live/<session> page a scanned QR code opens.
 export default function PhoneCapturePage() {
   const pairing = readPairing();
+  return <LiveCamera id={pairing.id} token={pairing.token} />;
+}
+
+// The camera itself. The screening page also opens it as a full-screen overlay for the device in
+// hand; `onDone` then closes the overlay and the screening adds the photos.
+export function LiveCamera({ id, token, onDone }: { id: string; token: string; onDone?: () => void }) {
+  const pairing = { id, token };
+  const overlay = onDone ? ' is-overlay' : '';
+  // As an overlay it is a modal dialog inside the app; on its own route it is the page.
+  const Shell = onDone ? 'div' : 'main';
+  const shellProps = onDone ? { role: 'dialog', 'aria-modal': true, 'aria-label': 'Live camera' } : { 'aria-label': 'Live camera' };
+  const doneButton = onDone ? <button type="button" className="live-done" onClick={onDone}>Done</button> : null;
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const capture = useRef<((reason: 'auto' | 'manual') => void) | null>(null);
@@ -148,7 +161,7 @@ export default function PhoneCapturePage() {
       capture.current = null;
       socket?.close();
     };
-    // The pairing values are read once per page load.
+    // The pairing values are fixed for the life of this component.
   }, [running, linkIsValid]);
 
   useEffect(() => () => { stream.current?.getTracks().forEach((track) => track.stop()); }, []);
@@ -158,12 +171,12 @@ export default function PhoneCapturePage() {
   }
 
   if (ended) {
-    return <main className="live-phone"><section className="live-card"><ShieldCheck size={30} /><h1>Live camera ended</h1><p>{ended}</p><p className="live-muted">{saved} photo{saved === 1 ? '' : 's'} were saved for the screening.</p></section></main>;
+    return <Shell className={`live-phone${overlay}`} {...shellProps}><section className="live-card"><ShieldCheck size={30} /><h1>Live camera ended</h1><p>{ended}</p><p className="live-muted">{saved} photo{saved === 1 ? '' : 's'} were saved for the screening.</p>{doneButton}</section></Shell>;
   }
 
   return (
-    <main className="live-phone">
-      <header className="live-phone-header"><span>MoldLens</span><span>Live camera</span></header>
+    <Shell className={`live-phone${overlay}`} {...shellProps}>
+      <header className="live-phone-header"><span>MoldLens</span>{doneButton ?? <span>Live camera</span>}</header>
       <div className="live-stage">
         <video ref={video} className="live-video" playsInline muted autoPlay aria-label="Live camera preview" />
         {running ? <p className="live-guidance" role="status" aria-live="polite">{guidance}</p> : null}
@@ -171,7 +184,7 @@ export default function PhoneCapturePage() {
           <section className="live-card live-consent">
             <Camera size={30} />
             <h1>Share your camera</h1>
-            <p>Frames are checked on the computer to help you frame the photos. Only the photos you keep are saved for this screening. The camera turns off when you leave this page.</p>
+            <p>MoldLens checks the live view to help you frame the photos. Only the photos you take are saved for this screening. The camera turns off when you finish.</p>
             {error && <p className="live-error" role="alert">{error}</p>}
             <button type="button" className="live-primary" onClick={start}>Start camera</button>
           </section>
@@ -187,6 +200,6 @@ export default function PhoneCapturePage() {
           <button type="button" className="live-shutter" aria-label="Take photo" disabled={!connected} onClick={() => capture.current?.('manual')} />
         </footer>
       )}
-    </main>
+    </Shell>
   );
 }

@@ -82,7 +82,6 @@ async function analyse(session, phone, buffer, live) {
   session.guidance = guidance;
   live.registry.touch(session);
   const reply = { type: 'guidance', ...guidance, streak: session.streak, autoCapture: session.streak >= AUTO_CAPTURE_STREAK };
+  // Guidance goes to the camera screen only. The desktop hears about connections and photos, not frames.
   if (phone.readyState === phone.OPEN) phone.send(json(reply));
-  for (const desktop of session.desktops) if (desktop.readyState === desktop.OPEN) desktop.send(buffer, { binary: true });
-  live.send(session, { ...reply, type: 'analysis', metrics, detections });
 }

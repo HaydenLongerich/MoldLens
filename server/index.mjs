@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { createApp, projectDirectory } from './app.mjs';
+import { allowedHosts, behindProxy } from './hosts.mjs';
 
 const port = Number(process.env.PORT || 5173);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid port number.');
@@ -16,7 +17,10 @@ if (process.env.NODE_ENV === 'production') {
     root: projectDirectory,
     server: {
       middlewareMode: true,
-      hmr: { host: '127.0.0.1', port: port + 1 },
+      // Vite runs its own host check, so it needs the same allowlist as Express. A phone on a
+      // tunnel cannot reach the loopback HMR port, so HMR is off when extra hosts are allowed.
+      allowedHosts: [...allowedHosts()],
+      hmr: behindProxy() ? false : { host: '127.0.0.1', port: port + 1 },
       fs: {
         strict: true,
         deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/server/**', '**/tests/**', '**/data/**', '**/staff-accounts.json*', '**/staff-setup-code', `${path.dirname(store.filename)}/**`],

@@ -12,7 +12,7 @@ test('a phone scanned from the desktop code takes a photo that joins the desktop
   await page.getByRole('button', { name: 'Save draft', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Draft saved.');
 
-  await page.getByRole('button', { name: 'Show phone code', exact: true }).click();
+  await page.getByRole('button', { name: 'Use phone camera', exact: true }).click();
   await expect(page.getByRole('img', { name: 'QR code to open the live camera on your phone' })).toBeVisible();
   const link = await page.getByLabel('Phone link', { exact: true }).inputValue();
   expect(link).toMatch(/\/live\/[0-9a-f-]{36}#[A-Za-z0-9_-]{16,}$/);
@@ -24,8 +24,7 @@ test('a phone scanned from the desktop code takes a photo that joins the desktop
   await phone.goto(link);
   await phone.getByRole('button', { name: 'Start camera', exact: true }).click();
   await expect(phone.getByText('0 of 12 photos')).toBeVisible();
-  await expect(page.getByText('Phone connected', { exact: true })).toBeVisible();
-  await expect(page.locator('.live-bubble').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Phone connected. Take photos on your phone.', { exact: true })).toBeVisible();
 
   await phone.getByRole('button', { name: 'Take photo', exact: true }).click();
   await expect(phone.getByText('Photo 1 of 12 saved.')).toBeVisible();
