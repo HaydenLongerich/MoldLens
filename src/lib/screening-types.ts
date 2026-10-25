@@ -45,6 +45,18 @@ export interface ScreeningFinding {
   id: string; kind: string; statement: string; strength: string | null; evidenceRefs: ScreeningEvidence[];
   alternatives: string[]; missing: string[];
 }
+export type ScreeningStepTiming = 'now' | 'next' | 'ongoing';
+export interface ScreeningCheck {
+  id: string; label: string;
+  status: 'seen' | 'reviewed' | 'reported' | 'not_measured' | 'not_reported';
+  finding: string; needs: string;
+}
+export interface ScreeningProfessionalOutlook {
+  inspectionFocus: { area: string; items: string[] }[];
+  typicalWork: { step: string; detail: string }[];
+  quoteChecklist: string[];
+  costNote: string;
+}
 export interface ScreeningReport {
   schemaVersion?: string; reportType: string; reference: string; generatedAt: string;
   outcome: 'qualified' | 'limited' | 'inconclusive'; outcomeReasons: string[];
@@ -59,7 +71,10 @@ export interface ScreeningReport {
   }[];
   unknowns: string[];
   safetyGuidance: { id: string; title: string; text: string; source?: { publisher?: string; url?: string }; reviewStatus?: string }[];
-  recommendations: { id: string; text: string; rationale: string; evidenceRefs?: ScreeningEvidence[] }[];
+  recommendations: { id: string; when?: ScreeningStepTiming; text: string; rationale: string; evidenceRefs?: ScreeningEvidence[] }[];
+  /** report-v2+. Older reports omit these sections. */
+  checks?: ScreeningCheck[];
+  professional?: ScreeningProfessionalOutlook;
   checklist: string[]; limitations: string[]; disclosure: string;
   provenance: { modelProvider: string; model: string; isMock: boolean; summaryModel?: string; promptVersion?: string; ruleVersion?: string; policyVersion?: string; questionBankVersion?: string; inputSnapshotHash?: string };
 }

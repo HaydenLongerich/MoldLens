@@ -283,6 +283,11 @@ export async function registerScreeningRoutes(app: any, options: any) {
       if (pending.length) throw new ValidationError('Finish or remove your uploads before submitting.');
       const failed = await db.select({ id: mediaAssets.id }).from(mediaAssets).where(and(eq(mediaAssets.assessmentId, a.id), eq(mediaAssets.status, 'failed')));
       if (failed.length) throw new ValidationError('Remove files that could not be processed before submitting.');
+      // Same required contact fields as the main request form.
+      const contact = (await linkFor(a.id))?.contact ?? {};
+      if (!contact.name || contact.name.length < 2) throw new ValidationError('Please enter your name.', 'name');
+      if (!contact.email) throw new ValidationError('Please enter a valid email address.', 'email');
+      if (!contact.postalCode) throw new ValidationError('Enter a Canadian postal code, like K1S 3W7.', 'postalCode');
       await db.transaction(tx => submitAssessment(tx as any, p, a.id));
       await syncClient(a.id);
     });
