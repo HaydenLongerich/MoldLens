@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, CircleHelp, ClipboardList, FileText, Gauge, HardHat, ImagePlus, Images, Info, ListChecks, LoaderCircle, MessageSquareText, Pause, Play, Printer, RefreshCw, ScanSearch, ShieldAlert, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react';
 import { ScreeningApiError, screeningApi, screeningOffline } from '../lib/screening-api';
+import LiveCapturePanel from '../live/LiveCapturePanel';
 import {
   SCREENING_AREAS, SCREENING_CONCERNS, SCREENING_PROPERTY_TYPES, SCREENING_REGIONS,
   type Screening, type ScreeningConfig, type ScreeningContact, type ScreeningDetails, type ScreeningLimits, type ScreeningQuestion,
@@ -656,8 +657,8 @@ export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean
           <p>JPG, PNG, WebP, HEIC, MP4, MOV or WebM<br />Up to {limits.maxFiles} files, {bytes(limits.maxUploadBytes)} each, videos up to {Math.round(limits.maxVideoSeconds / 60)} min</p>
           <input ref={fileInput} id="screening-media" className="screening-sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm" disabled={busy || addingFiles || !consentAi || !consentStorage} onChange={event => { if (event.target.files) void addFiles(event.target.files); event.target.value = ''; }} />
         </div>
-
-      </div>
+        {id && !readOnly && <LiveCapturePanel disabled={busy || addingFiles || !consentAi || !consentStorage} onSnapshots={addFiles} />}
+              </div>
       {(uploads.length > 0 || !!screening?.media.length) && <div className="screening-upload-list" aria-label="Screening files">
         {uploads.filter(item => !item.assetId || !screening?.media.some(media => media.id === item.assetId)).map(item => <div className="screening-upload" key={item.key}>
           <div className="screening-upload-heading"><strong>{item.name}</strong><span>{bytes(item.size)}</span></div>

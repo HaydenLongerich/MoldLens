@@ -1,0 +1,59 @@
+/* Desktop panel: sits inside the screening form, so it reuses the screening card and button styles. */
+.live-panel { margin-top: 14px; padding: 18px; border: 1px dashed var(--border-strong); border-radius: 12px; background: var(--accent-subtle); display: grid; gap: 14px; color: var(--ink); }
+.live-panel h3 { margin: 0; font-size: 15px; color: var(--heading); }
+.live-intro { display: flex; gap: 12px; align-items: flex-start; color: var(--accent-strong); }
+.live-intro p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.live-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: start; }
+.live-pairing { display: grid; justify-items: center; gap: 8px; font-size: 12px; color: var(--muted); text-align: center; }
+.live-pairing img { border-radius: 8px; background: #fff; padding: 6px; border: 1px solid var(--border); }
+.live-stage-desktop { display: grid; gap: 12px; min-width: 0; }
+.live-preview { position: relative; aspect-ratio: 4 / 3; border-radius: 10px; background: #111619; overflow: hidden; display: grid; place-items: center; }
+.live-preview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.live-preview > p { color: #d5dadd; }
+.live-box { position: absolute; border: 2px solid #ffb37f; border-radius: 4px; box-shadow: 0 0 0 1px #0007; pointer-events: none; }
+.live-box.is-clipped { border-style: dashed; }
+.live-chat { display: grid; gap: 6px; max-height: 160px; overflow-y: auto; }
+.live-bubble { margin: 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; max-width: 90%; }
+.live-bubble.is-assistant { background: var(--surface); border: 1px solid var(--border); justify-self: start; }
+.live-bubble.is-system { background: transparent; color: var(--muted); font-size: 12px; justify-self: center; }
+.live-warning, .live-error { margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.live-warning { background: #fff4e5; color: #7a4b00; border: 1px solid #f0cf8f; }
+.live-error { background: #fbeeed; color: var(--danger); border: 1px solid #efc7c3; }
+.live-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.live-thumb { position: relative; width: 74px; height: 74px; border-radius: 8px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); display: grid; place-items: center; }
+.live-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.live-thumb > span { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; background: #173638cc; color: #fff; padding: 2px 0; }
+.live-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.live-muted { color: var(--muted); font-size: 13px; }
+.live-spin { animation: live-spin 1s linear infinite; }
+@keyframes live-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .live-body { grid-template-columns: 1fr; }
+  .live-pairing img { width: 160px; height: 160px; }
+}
+
+/* Phone page: full-screen camera with guidance over the top and the shutter at the bottom. */
+.live-phone { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: #0c1214; color: #f5f7f8; font-family: 'DM Sans', sans-serif; }
+.live-phone-header { display: flex; justify-content: space-between; padding: 14px 16px; font-size: 13px; color: #cfd6d9; }
+.live-phone-header span:first-child { font-family: 'Manrope', sans-serif; font-weight: 800; }
+.live-stage { position: relative; flex: 1; display: grid; place-items: center; min-height: 0; }
+.live-video { width: 100%; height: 100%; min-height: 60vh; object-fit: cover; background: #000; }
+.live-guidance { position: absolute; left: 16px; right: 16px; top: 14px; margin: 0; padding: 12px 14px; border-radius: 12px; background: #000b; font-size: 15px; line-height: 1.5; text-align: center; }
+.live-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 26px; }
+.live-status { display: grid; gap: 4px; font-size: 14px; }
+.live-status small { color: #cfd6d9; font-size: 12px; }
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #8a949a; margin-right: 8px; }
+.live-dot.is-on { background: #6fd39a; }
+.live-shutter { width: 74px; height: 74px; border-radius: 50%; border: 5px solid #fff; background: #fff3; cursor: pointer; flex-shrink: 0; }
+.live-shutter:disabled { opacity: .4; cursor: default; }
+.live-card { margin: 20px; padding: 24px; border-radius: 16px; background: #fff; color: #173638; display: grid; gap: 12px; justify-items: start; }
+.live-card h1 { margin: 0; font-size: 22px; font-family: 'Manrope', sans-serif; }
+.live-card p { margin: 0; line-height: 1.6; font-size: 15px; }
+.live-card .live-error { color: var(--danger); background: #fbeeed; border-color: #efc7c3; }
+.live-primary { min-height: 48px; padding: 0 22px; border: 0; border-radius: 10px; background: #d6420f; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.live-phone .live-muted { color: #5b656a; }
+.live-phone .live-card .live-muted { color: #5b656a; }
+.live-link { font-size: 12px; color: var(--muted); max-width: 200px; }
+.live-link summary { cursor: pointer; }
+.live-link input { width: 100%; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; color: var(--ink); background: var(--surface); }

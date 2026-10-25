@@ -8,6 +8,8 @@ import { HttpError, validateIntake, validateNote, validateUpdates } from './vali
 import { contractors } from './contractors.mjs';
 import { createAuth, customerRecord, staffRecord } from './auth.mjs';
 import { registerMarketplace } from './marketplace.mjs';
+import { behindProxy, isAllowedHost } from './hosts.mjs';
+import { createLive, registerLiveRoutes } from './live/index.mjs';
 
 export const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next);
@@ -22,14 +24,14 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
   const auth = await createAuth(dataDirectory, authOptions);
   const uploadDirectory = path.join(dataDirectory, 'uploads');
   const app = express();
+  const live = await createLive({ auth, dataDirectory });
   app.disable('x-powered-by');
+  // Tunnels and reverse proxies report the original HTTPS scheme only when they are trusted.
+  if (behindProxy()) app.set('trust proxy', 1);
   app.use((request, response, next) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'same-origin');
-    let host;
-    try { host = new URL(`http://${request.headers.host}`).hostname; }
-    catch { return next(new HttpError(400, 'Invalid request host.')); }
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) return next(new HttpError(403, 'This prototype is available on the local computer only.'));
+    if (!isAllowedHost(request.headers.host)) return next(new HttpError(403, 'This prototype is available on the local computer only.'));
     if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
       const expectedOrigin = `${request.protocol}://${request.get('host')}`;
       if ((request.headers.origin && request.headers.origin !== expectedOrigin) || request.headers['sec-fetch-site'] === 'cross-site') return next(new HttpError(403, 'Cross-origin changes are not allowed.'));
@@ -77,6 +79,7 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
   }));
   app.use('/uploads', (_request, _response, next) => next(new HttpError(404, 'This file could not be found.')));
   app.get('/api/health', (_request, response) => response.json({ status: 'ok', mode: 'local-demo' }));
+  registerLiveRoutes(app, live);
   app.get('/api/auth/session', asyncRoute(async (request, response) => response.json(await auth.state(request))));
   app.post('/api/auth/setup', asyncRoute(async (request, response) => response.status(201).json(await auth.setup(request, response))));
   app.post('/api/auth/login', asyncRoute(async (request, response) => response.json(await auth.login(request, response))));
@@ -132,5 +135,5 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     console.error('Request could not be completed:', error.code || error.name || 'UnknownError');
     response.status(500).json({ error: 'We could not save your changes. Please try again.' });
   });
-  return { app, store, auth, screening };
+  return { app, store, auth, screening, live };
 }
