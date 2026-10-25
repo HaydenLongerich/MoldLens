@@ -7,7 +7,7 @@ import { createApp } from '../server/app.mjs';
 import { dispatch, jsonRequest, cookieHeader, withCookie } from './http-helpers.mjs';
 import { confirmedQuote } from './proposal-fixtures.mjs';
 
-const context = { propertyType: 'house', region: 'ON', areas: ['basement', 'bathroom', 'attic'], concerns: ['visible_spots'], statement: 'Spots near the basement window, bathroom moisture and attic staining.' };
+const context = { propertyType: 'house', region: 'ON', areas: ['basement', 'bathroom', 'attic'], concerns: ['visible_spots'], statement: 'Spots near the basement window, bathroom moisture and attic staining.', contact: { name: 'Test homeowner', email: 'owner@example.test', postalCode: 'L3Y 1A1' } };
 const get = (app, url, cookie = '') => dispatch(app, withCookie({ url }, cookie));
 const post = (app, url, body = {}, cookie = '') => dispatch(app, withCookie(jsonRequest('POST', url, body), cookie));
 async function setup(t) {

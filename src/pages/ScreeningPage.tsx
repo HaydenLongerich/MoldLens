@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, FileText, ImagePlus, LoaderCircle, Pause, Play, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown, CircleHelp, ClipboardList, FileText, Gauge, HardHat, ImagePlus, Images, Info, ListChecks, LoaderCircle, MessageSquareText, Pause, Play, Printer, RefreshCw, ScanSearch, ShieldAlert, ShieldCheck, Trash2, type LucideIcon } from 'lucide-react';
 import { ScreeningApiError, screeningApi, screeningOffline } from '../lib/screening-api';
 import {
   SCREENING_AREAS, SCREENING_CONCERNS, SCREENING_PROPERTY_TYPES, SCREENING_REGIONS,
-  type Screening, type ScreeningConfig, type ScreeningDetails, type ScreeningLimits, type ScreeningQuestion,
-  type ScreeningQuestions, type ScreeningReportResponse, type ScreeningStatus,
+  type Screening, type ScreeningConfig, type ScreeningContact, type ScreeningDetails, type ScreeningLimits, type ScreeningQuestion,
+  type ScreeningQuestions, type ScreeningReportResponse, type ScreeningStatus, type ScreeningCheck, type ScreeningStepTiming,
 } from '../lib/screening-types';
 import './screening.css';
 import { localTesting } from '../lib/testing';
 import { marketplace } from '../lib/marketplace';
 
 const DEFAULT_LIMITS: ScreeningLimits = { maxFiles: 12, maxUploadBytes: 500 * 1024 * 1024, maxVideoSeconds: 600, chunkBytes: 8 * 1024 * 1024 };
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const POSTAL_PATTERN = /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d$/i;
+const CONTACT_IDS = { name: 'screening-name', email: 'screening-email', postalCode: 'screening-postal', address: 'screening-address', phone: 'screening-phone' } as const;
+type ContactErrors = Partial<Record<'name' | 'email' | 'postalCode' | 'phone', string>>;
 const EMPTY_DETAILS: ScreeningDetails = { areas: [], concerns: [], statement: '', propertyType: '', region: 'ON' };
 const MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'video/mp4', 'video/quicktime', 'video/webm']);
 export const SCREENING_STATUS_LABELS: Record<ScreeningStatus, string> = {
@@ -80,7 +84,7 @@ export function ScreeningsList({ refreshKey = 0, excludeIds = [], hideWhenEmpty 
     {error && <p className="screening-error" role="alert">{error}</p>}
     {!loading && !error && visibleItems.length === 0 && <p className="screening-hint">Your saved screenings will appear here.</p>}
     <div className="screening-history-list">{visibleItems.map(item => <a href={screeningHref(item.id)} className="screening-history-item" key={item.id}>
-      <span><strong>{item.reference}</strong>{item.createdAt && <small>{new Date(item.createdAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</small>}</span>
+      <span><strong>REF: {item.reference}</strong>{item.createdAt && <small>{new Date(item.createdAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</small>}</span>
       <span className="screening-history-status">{SCREENING_STATUS_LABELS[item.status]}<ArrowRight size={16} /></span>
     </a>)}</div>
   </section>;
@@ -105,7 +109,7 @@ function FollowupQuestions({ questions, busy, onFinish }: { questions: Screening
     <h2>{questions.length === 1 ? 'One quick question' : `${questions.length} quick questions`}</h2>
     <p className="screening-hint">Your answers help put the visible signs in context.</p>
     {questions.map(question => <fieldset className="screening-question" key={question.id} disabled={busy}>
-      <legend>{question.text}{question.optional && <span className="screening-hint"> (optional)</span>}</legend>
+      <legend>{question.text}{question.optional && <span className="screening-hint"> (optional)</span>}{question.kind === 'multi' && <span className="screening-multi-hint">Select all that apply</span>}</legend>
       {question.help && <p className="screening-hint">{question.help}</p>}
       <div className="screening-options">{question.options.map(option => <label className="screening-choice" key={option.value}>
         <input type={question.kind === 'multi' ? 'checkbox' : 'radio'} name={question.id} checked={Array.isArray(values[question.id]) ? (values[question.id] as string[]).includes(option.value) : values[question.id] === option.value} onChange={() => choose(question, option.value)} />
@@ -117,23 +121,91 @@ function FollowupQuestions({ questions, busy, onFinish }: { questions: Screening
   </form>;
 }
 
+const OUTCOME_LABEL = { qualified: 'Screening complete', limited: 'Limited screening', inconclusive: 'Inconclusive screening' } as const;
+const PRIORITY_LABEL = { prompt: 'Address promptly', soon: 'Follow up soon', routine: 'Routine follow-up' } as const;
+const STEP_GROUPS: { when: ScreeningStepTiming; title: string }[] = [{ when: 'now', title: 'Do now' }, { when: 'next', title: 'Next' }, { when: 'ongoing', title: 'Keep doing' }];
+const CHECK_STATUS: Record<ScreeningCheck['status'], string> = { seen: 'Seen in your media', reviewed: 'Reviewed', reported: 'You reported', not_measured: 'Not measured', not_reported: 'Nothing reported' };
+const FINDING_TAG: Record<string, string> = { visual: 'Seen in media', reported_only: 'You reported', poor_visibility: 'Unclear in media' };
+
+/** Opens every collapsed section and names the file after the report, so the saved PDF is complete. */
+function printReport(root: HTMLElement | null, reference: string) {
+  const closed = root ? Array.from(root.querySelectorAll<HTMLDetailsElement>('details:not([open])')) : [];
+  const title = document.title;
+  closed.forEach(item => { item.open = true; });
+  document.title = `MoldLens screening report ${reference}`;
+  const restore = () => { closed.forEach(item => { item.open = false; }); document.title = title; window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  window.print();
+}
+
+function DocSection({ title, icon: Icon, intro, className, children }: { title: string; icon: LucideIcon; intro?: string; className?: string; children: ReactNode }) {
+  return <section className={className ? `doc-section ${className}` : 'doc-section'}>
+    <h2 className="doc-heading"><span className="doc-heading-icon" aria-hidden="true"><Icon size={17} strokeWidth={1.9} /></span>{title}</h2>
+    {intro && <p className="doc-intro">{intro}</p>}
+    {children}
+  </section>;
+}
+
+/**
+ * Customers get a short report at the level of a job summary. Staff and contractors
+ * (readOnly) also get the measurement table, typical work, guidance and provenance.
+ */
 function ScreeningResult({ result, readOnly }: { result: ScreeningReportResponse; readOnly: boolean }) {
   const report = result.report;
+  const doc = useRef<HTMLElement>(null);
   const urls = Object.fromEntries(result.frames.map(frame => [frame.id, safeUrl(frame.url, true)]));
   if (!result.validation.passed) return <div className="screening-error" role="alert">This report needs review before it can be shown. Your submission is saved.</div>;
-  const outcome = report.outcome === 'qualified' ? 'Screening complete' : report.outcome === 'limited' ? 'Limited screening' : 'Inconclusive screening';
-  return <div className="screening-report">
-    <section className="screening-card">
-      <span className="screening-badge">{outcome}</span>
-      <h1>{report.summary.headline}</h1>
-      {(result.isDemo || report.provenance.isMock) && <p className="screening-notice">Demo analysis: this result was not produced by an AI model.</p>}
-      {report.outcomeReasons.length > 0 && <p className="screening-notice">{report.outcomeReasons.join(' ')}</p>}
-      <ul className="screening-copy-list">{report.summary.points.map((point, i) => <li key={i}>{point}</li>)}</ul>
-      <p className="screening-hint">{report.disclosure}</p>
-    </section>
-    {report.highlights.length > 0 && <section className="screening-card">
-      <h2>What the photos show</h2><p className="screening-hint">Marked areas are approximate. Appearance alone cannot confirm mold.</p>
-      <div className="screening-highlights">{report.highlights.map(highlight => {
+  const full = readOnly;
+  const areasReviewed = [...new Set([...report.areas.map(area => area.label), ...(report.professional?.inspectionFocus.map(item => item.area) ?? [])])];
+  const steps = STEP_GROUPS.flatMap(group => report.recommendations.filter(item => (item.when ?? 'next') === group.when).map((item, index) => ({ ...item, group: index === 0 ? group.title : '' })));
+  const photoRefs = report.evidenceGallery.filter((ref, i, refs) => ref.frameId && urls[ref.frameId] && refs.findIndex(other => other.frameId === ref.frameId) === i);
+  const generated = new Date(report.generatedAt);
+  const limitations = report.limitations.filter(item => !report.outcomeReasons.includes(item) && !report.summary.points.includes(item));
+  const usedModel = !report.provenance.isMock && !!report.provenance.modelProvider && report.provenance.modelProvider !== 'none';
+  const provenance = report.provenance.isMock ? 'Demo mode, no AI model' : usedModel ? `${report.provenance.modelProvider} (${report.provenance.model})` : 'Rules only, no AI model';
+
+  return <article className="screening-report doc" ref={doc} aria-labelledby="screening-doc-title">
+    <header className="doc-head">
+      <div className="doc-brandrow">
+        <span className="doc-brand"><strong>MoldLens</strong><span>{report.reportType}</span>{full && <em className="doc-audience">Full report, staff and contractors</em>}</span>
+        <button type="button" className="screening-text-button no-print" onClick={() => printReport(doc.current, report.reference)}><Printer size={15} />Print or save as PDF</button>
+      </div>
+      <h1 id="screening-doc-title">{report.summary.headline}</h1>
+      {(result.isDemo || report.provenance.isMock) && <p className="doc-note">Demo result, not AI analysis.</p>}
+    </header>
+
+    <DocSection title="What to do" icon={ClipboardList} className="doc-section-first">
+      <table className="doc-table">
+        <thead><tr><th scope="col" className="doc-col-narrow">When</th><th scope="col">Action</th><th scope="col">Why</th></tr></thead>
+        <tbody>{steps.map(item => <tr key={item.id}><td className="doc-when">{item.group}</td><td className="doc-strong">{item.text}</td><td>{item.rationale}</td></tr>)}</tbody>
+      </table>
+      {!readOnly && <div className="screening-actions no-print"><a className="btn btn-primary" href="#customer">My screenings<ArrowRight size={16} /></a></div>}
+    </DocSection>
+
+    <DocSection title="Report details" icon={FileText}>
+      <table className="doc-kv">
+        <tbody>
+          <tr><th scope="row">Reference</th><td>{report.reference}</td></tr>
+          <tr><th scope="row">Date</th><td>{generated.toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}</td></tr>
+          <tr><th scope="row">Property</th><td>{report.property.type}, {report.property.region}</td></tr>
+          {areasReviewed.length > 0 && <tr><th scope="row">Areas</th><td>{areasReviewed.join(', ')}</td></tr>}
+          <tr><th scope="row">Method</th><td>{report.method}</td></tr>
+          <tr><th scope="row">Result</th><td className="doc-strong">{OUTCOME_LABEL[report.outcome]}{report.outcomeReasons.length > 0 && <span className="doc-cell-note">{report.outcomeReasons.join(' ')}</span>}</td></tr>
+          <tr><th scope="row">Priority</th><td className={`doc-strong doc-priority is-${report.priority}`}>{PRIORITY_LABEL[report.priority]}{report.priorityReasons.length > 0 && <span className="doc-cell-note">{report.priorityReasons.join('. ')}.</span>}</td></tr>
+        </tbody>
+      </table>
+    </DocSection>
+
+    {(report.areas.length > 0 || report.highlights.length > 0) && <DocSection title="What we saw" icon={ScanSearch} intro="Appearance alone cannot confirm mold.">
+      {report.areas.length > 0 && <table className="doc-table">
+        <thead><tr><th scope="col" className="doc-col-narrow">Area</th><th scope="col" className="doc-col-narrow">Source</th><th scope="col">Observation</th></tr></thead>
+        <tbody>{report.areas.flatMap(area => area.findings.map((finding, index) => <tr key={finding.id}>
+          <td className="doc-strong">{index === 0 ? area.label : ''}</td>
+          <td>{FINDING_TAG[finding.kind] ?? 'Note'}</td>
+          <td>{finding.statement}{full && finding.kind === 'visual' && finding.alternatives.length > 0 && <span className="doc-cell-note">Could also be: {finding.alternatives.slice(0, 2).join('; ').toLowerCase()}</span>}</td>
+        </tr>))}</tbody>
+      </table>}
+      {report.highlights.length > 0 && <div className="screening-highlights">{report.highlights.map((highlight, index) => {
         const region = highlight.region;
         const x = region ? Math.max(0, Math.min(1, region.x)) : 0;
         const y = region ? Math.max(0, Math.min(1, region.y)) : 0;
@@ -143,29 +215,85 @@ function ScreeningResult({ result, readOnly }: { result: ScreeningReportResponse
             {urls[highlight.frameId] ? <a href={urls[highlight.frameId]} target="_blank" rel="noreferrer"><img src={urls[highlight.frameId]} alt={highlight.description} loading="lazy" /></a> : <span>Image unavailable</span>}
             {urls[highlight.frameId] && showRegion && <span className="screening-evidence-box" aria-hidden="true" style={{ left: `${x * 100}%`, top: `${y * 100}%`, width: `${Math.max(0, Math.min(1 - x, region.width)) * 100}%`, height: `${Math.max(0, Math.min(1 - y, region.height)) * 100}%` }} />}
           </div>
-          <figcaption><strong>{highlight.location}</strong><p>{highlight.description}</p><small>{highlight.area} · {highlight.sourceLabel}{highlight.timestampMs != null && ` · ${timestamp(highlight.timestampMs)}`}</small></figcaption>
+          <figcaption><strong>Photo {index + 1}: {highlight.location}</strong><p>{highlight.description}</p><small>{[highlight.area, highlight.sourceLabel, highlight.timestampMs != null ? timestamp(highlight.timestampMs) : ''].filter(Boolean).join(', ')}</small></figcaption>
         </figure>;
-      })}</div>
-    </section>}
-    <section className="screening-card">
-      <h2>Your next steps</h2>
-      <p className="screening-hint">Suggested timing: {report.priority === 'prompt' ? 'prompt follow-up' : report.priority === 'soon' ? 'follow up soon' : 'routine follow-up'}. {report.priorityReasons.join(' ')}</p>
-      <ul className="screening-copy-list">{report.recommendations.map(item => <li key={item.id}><strong>{item.text}</strong><p className="screening-hint">{item.rationale}</p></li>)}</ul>
-      {!readOnly && <div className="screening-actions"><a className="btn btn-primary" href="#customer">My screenings<ArrowRight size={16} /></a></div>}
-    </section>
-    {report.safetyGuidance.length > 0 && <section className="screening-card"><h2>What you can do now</h2>{report.safetyGuidance.map(item => <details className="screening-disclosure" key={item.id}><summary>{item.title}<ChevronDown size={16} /></summary><p>{item.text}</p>{item.source?.publisher && <p className="screening-hint">Source: {safeUrl(item.source.url) ? <a href={safeUrl(item.source.url)} target="_blank" rel="noreferrer">{item.source.publisher}</a> : item.source.publisher}{item.reviewStatus && item.reviewStatus !== 'approved' && ' (wording pending review)'}</p>}</details>)}</section>}
-    <section className="screening-card">
-      <h2>Details of your screening</h2>
-      <details className="screening-disclosure"><summary>Findings by area<ChevronDown size={16} /></summary>
-        {report.areas.map(area => <section className="screening-findings" key={area.area}><h3>{area.label}</h3>{area.findings.length === 0 && <p className="screening-hint">No area-level finding was recorded.</p>}{area.findings.map(finding => <div className="screening-finding" key={finding.id}><span className="screening-evidence-label">{finding.kind === 'visual' ? 'Visible observation' : finding.kind === 'reported_only' ? 'You reported' : 'Limited visibility'}</span><p>{finding.statement}</p>{finding.strength && <small>Visibility: {finding.strength}</small>}<div className="screening-evidence-links">{finding.evidenceRefs.map((ref, i) => ref.frameId && urls[ref.frameId] ? <a href={urls[ref.frameId]} key={`${ref.id}-${i}`} target="_blank" rel="noreferrer">{ref.label}</a> : <span key={`${ref.id}-${i}`}>{ref.label}</span>)}</div>{finding.alternatives.length > 0 && <p className="screening-hint">Other explanations: {finding.alternatives.join('; ')}</p>}{finding.missing.length > 0 && <p className="screening-hint">Still unknown: {finding.missing.join('; ')}</p>}</div>)}</section>)}
-      </details>
-      <details className="screening-disclosure"><summary>All referenced images<ChevronDown size={16} /></summary><div className="screening-gallery">{report.evidenceGallery.filter((ref, i, refs) => ref.frameId && refs.findIndex(other => other.frameId === ref.frameId) === i).map(ref => <figure key={ref.frameId}>{ref.frameId && urls[ref.frameId] && <a href={urls[ref.frameId]} target="_blank" rel="noreferrer"><img src={urls[ref.frameId]} alt={ref.label} loading="lazy" /></a>}<figcaption>{ref.label}</figcaption></figure>)}</div></details>
-      <details className="screening-disclosure"><summary>Your answers<ChevronDown size={16} /></summary><dl className="screening-context">{report.customerContext.map((entry, i) => <div key={i}><dt>{entry.label}</dt><dd>{entry.value}</dd></div>)}</dl></details>
-      <details className="screening-disclosure"><summary>What remains unknown<ChevronDown size={16} /></summary><ul className="screening-copy-list">{report.unknowns.map((item, i) => <li key={i}>{item}</li>)}</ul></details>
-      <details className="screening-disclosure"><summary>Your checklist<ChevronDown size={16} /></summary><ul className="screening-copy-list">{report.checklist.map((item, i) => <li key={i}>{item}</li>)}</ul></details>
-      <details className="screening-disclosure"><summary>About this report<ChevronDown size={16} /></summary><p>{report.reportType}</p><p className="screening-hint">{report.method}</p><ul className="screening-copy-list">{report.limitations.map((item, i) => <li key={i}>{item}</li>)}</ul><p className="screening-hint">{report.provenance.isMock ? 'Demo mode' : `${report.provenance.modelProvider} · ${report.provenance.model}`} · {new Date(report.generatedAt).toLocaleString('en-CA')}{result.version && ` · Version ${result.version}`}</p></details>
-    </section>
-  </div>;
+      })}</div>}
+      {report.highlights.length > 0 && <p className="doc-intro">Marked areas are approximate.</p>}
+    </DocSection>}
+
+    {report.customerContext.length > 0 && <DocSection title={full ? 'Customer answers' : 'Your answers'} icon={MessageSquareText}>
+      <table className="doc-kv">
+        <tbody>{report.customerContext.map((entry, i) => <tr key={i}><th scope="row">{entry.label}</th><td>{entry.value}</td></tr>)}</tbody>
+      </table>
+    </DocSection>}
+
+    {report.checklist.length > 0 && <DocSection title="Things to check yourself" icon={ListChecks}>
+      <ul className="doc-list">{report.checklist.map((item, i) => <li key={i}>{item}</li>)}</ul>
+    </DocSection>}
+
+    {full && report.checks && report.checks.length > 0 && <DocSection title="Checks and measurements" icon={Gauge} intro="No instrument readings were taken.">
+      <table className="doc-table">
+        <thead><tr><th scope="col">Check</th><th scope="col" className="doc-col-narrow">Status</th><th scope="col">What we know</th><th scope="col">To measure it</th></tr></thead>
+        <tbody>{report.checks.map(check => <tr key={check.id}>
+          <td className="doc-strong">{check.label}</td>
+          <td className={`doc-status is-${check.status}`}>{CHECK_STATUS[check.status]}</td>
+          <td>{check.finding}</td>
+          <td className="doc-muted">{check.needs}</td>
+        </tr>)}</tbody>
+      </table>
+    </DocSection>}
+
+    {full && report.professional && <DocSection title="On-site scope" icon={HardHat}>
+      {report.professional.inspectionFocus.length > 0 && <>
+        <h3>Inspection focus</h3>
+        <table className="doc-table">
+          <thead><tr><th scope="col" className="doc-col-narrow">Area</th><th scope="col">What to check</th></tr></thead>
+          <tbody>{report.professional.inspectionFocus.map(item => <tr key={item.area}><td className="doc-strong">{item.area}</td><td><ul className="doc-cell-list">{item.items.map(text => <li key={text}>{text}</li>)}</ul></td></tr>)}</tbody>
+        </table>
+      </>}
+      <h3>Typical job, if work is needed</h3>
+      <table className="doc-table">
+        <thead><tr><th scope="col" className="doc-col-index">#</th><th scope="col" className="doc-col-narrow">Step</th><th scope="col">What happens</th></tr></thead>
+        <tbody>{report.professional.typicalWork.map((item, index) => <tr key={item.step}><td className="doc-muted">{index + 1}</td><td className="doc-strong">{item.step}</td><td>{item.detail}</td></tr>)}</tbody>
+      </table>
+      <p className="doc-paragraph"><strong>Cost.</strong> {report.professional.costNote}</p>
+      <h3>A clear quote should state</h3>
+      <ul className="doc-list doc-list-columns">{report.professional.quoteChecklist.map(text => <li key={text}>{text}</li>)}</ul>
+    </DocSection>}
+
+    {full && report.safetyGuidance.length > 0 && <DocSection title="Safety guidance" icon={ShieldAlert}>
+      <table className="doc-table">
+        <thead><tr><th scope="col" className="doc-col-narrow">Topic</th><th scope="col">Guidance</th></tr></thead>
+        <tbody>{report.safetyGuidance.map(item => <tr key={item.id}>
+          <td className="doc-strong">{item.title}</td>
+          <td>{item.text}{item.source?.publisher && <span className="doc-cell-note">Source: {safeUrl(item.source.url) ? <a href={safeUrl(item.source.url)} target="_blank" rel="noreferrer">{item.source.publisher}</a> : item.source.publisher}{item.reviewStatus && item.reviewStatus !== 'approved' && ' (wording pending review)'}</span>}</td>
+        </tr>)}</tbody>
+      </table>
+    </DocSection>}
+
+    {full && report.unknowns.length > 0 && <DocSection title="What remains unknown" icon={CircleHelp}>
+      <ul className="doc-list">{report.unknowns.map((item, i) => <li key={i}>{item}</li>)}</ul>
+    </DocSection>}
+
+    {full && photoRefs.length > 0 && <DocSection title={`Referenced images (${photoRefs.length})`} icon={Images}>
+      <div className="screening-gallery">{photoRefs.map(ref => <figure key={ref.frameId}><a href={urls[ref.frameId!]} target="_blank" rel="noreferrer"><img src={urls[ref.frameId!]} alt={ref.label} loading="lazy" /></a><figcaption>{ref.label}</figcaption></figure>)}</div>
+    </DocSection>}
+
+    {full && <DocSection title="About this report" icon={Info}>
+      {limitations.length > 0 && <ul className="doc-list">{limitations.map((item, i) => <li key={i}>{item}</li>)}</ul>}
+      <table className="doc-kv">
+        <tbody>
+          <tr><th scope="row">Analysis</th><td>{provenance}</td></tr>
+          <tr><th scope="row">Generated</th><td>{generated.toLocaleString('en-CA')}</td></tr>
+          {!!result.version && <tr><th scope="row">Version</th><td>{result.version}</td></tr>}
+        </tbody>
+      </table>
+    </DocSection>}
+
+    {!full && <p className="doc-handoff"><HardHat size={16} aria-hidden="true" />A specialist receives the full report, including what to measure on site and the typical scope of work.</p>}
+
+    <footer className="doc-disclosure"><span>REF: {report.reference}</span><p>{report.disclosure}</p></footer>
+  </article>;
 }
 
 export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean }) {
@@ -188,6 +316,23 @@ export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean
   const [saved, setSaved] = useState('');
   const [retry, setRetry] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [contactErrors, setContactErrors] = useState<ContactErrors>({});
+  const moreDetails = useRef<HTMLDetailsElement>(null);
+  const contactError = (key: keyof ContactErrors) => contactErrors[key] ? <p className="screening-file-error" id={`${CONTACT_IDS[key]}-error`}>{contactErrors[key]}</p> : null;
+  // Shown when someone tries to add files before ticking both consent boxes.
+  const [consentNudge, setConsentNudge] = useState(false);
+  const [consentShake, setConsentShake] = useState(false);
+  const consentRef = useRef<HTMLFieldSetElement>(null);
+  const consented = consentAi && consentStorage;
+  useEffect(() => { if (consented) setConsentNudge(false); }, [consented]);
+  function nudgeConsent() {
+    setConsentNudge(true);
+    setConsentShake(false);
+    requestAnimationFrame(() => setConsentShake(true));
+    const fieldset = consentRef.current;
+    fieldset?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    fieldset?.querySelector<HTMLInputElement>('input:not(:checked)')?.focus({ preventScroll: true });
+  }
   const hydratedId = useRef<string | null>(null);
   const mounted = useRef(true);
   const routeVersion = useRef(0);
@@ -414,19 +559,26 @@ export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean
       if (activeRoute(version)) { setUploads(items => items.filter(item => item.assetId !== assetId)); setScreening(previous => previous ? { ...previous, media: previous.media.filter(item => item.id !== assetId) } : null); setRetry(value => value + 1); }
     } catch (cause) { if (activeRoute(version)) setError(message(cause)); } finally { if (activeRoute(version)) setBusy(false); }
   }
-  function draftDetails() {
+  function draftDetails(submit: boolean) {
     if (!details.areas.length) throw new Error('Choose at least one affected area.');
     if (!details.concerns.length) throw new Error('Choose what you’ve noticed. “Not sure” is fine.');
     if (!details.propertyType) throw new Error('Choose the property type.');
-    const contact = details.contact ? { ...details.contact, name: details.contact.name?.trim() || '', email: details.contact.email?.trim() || '', postalCode: details.contact.postalCode?.trim() || '' } : undefined;
-    if (contact?.postalCode) {
-      const code = contact.postalCode.toUpperCase().replace(/[ -]/g, '');
-      if (!/^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\d[ABCEGHJ-NPRSTV-Z]\d$/.test(code)) throw new Error('Enter a valid Canadian postal code, such as L3Y 1A1.');
-      contact.postalCode = `${code.slice(0, 3)} ${code.slice(3)}`;
+    const raw = details.contact;
+    const contact: ScreeningContact = { name: raw?.name?.trim() || '', email: raw?.email?.trim() || '', postalCode: raw?.postalCode?.trim() || '', address: raw?.address?.trim() || '', phone: raw?.phone?.trim() || '' };
+    // Same rules as the main request form. Drafts only check what has been filled in.
+    const next: ContactErrors = {};
+    if ((submit || contact.name) && contact.name.length < 2) next.name = 'Please enter your name.';
+    if ((submit || contact.email) && !EMAIL_PATTERN.test(contact.email)) next.email = 'Please enter a valid email address.';
+    if ((submit || contact.postalCode) && !POSTAL_PATTERN.test(contact.postalCode)) next.postalCode = 'Enter a Canadian postal code, like L3Y 1A1.';
+    if (contact.phone && (!/^[+\d\s().-]+$/.test(contact.phone) || !/^\d{10,15}$/.test(contact.phone.replace(/\D/g, '')))) next.phone = 'Please enter a phone number with 10 to 15 digits.';
+    setContactErrors(next);
+    const first = (['name', 'email', 'postalCode', 'phone'] as const).find(key => next[key]);
+    if (first) {
+      if (first === 'phone' && moreDetails.current) moreDetails.current.open = true;
+      requestAnimationFrame(() => document.getElementById(CONTACT_IDS[first])?.focus());
+      throw new Error('Please check your contact details below.');
     }
-    if (contact && [contact.name, contact.email].some(Boolean)) {
-      if (!contact.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) throw new Error('Add your name and a valid email, or leave the optional contact section blank.');
-    }
+    if (contact.postalCode) { const code = contact.postalCode.toUpperCase().replace(/[ -]/g, ''); contact.postalCode = `${code.slice(0, 3)} ${code.slice(3)}`; }
     return { ...details, statement: details.statement?.trim() || undefined, contact };
   }
   async function save(submit: boolean) {
@@ -434,7 +586,7 @@ export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean
     const version = routeVersion.current;
     setError(''); setSaved('');
     try {
-      const data = draftDetails();
+      const data = draftDetails(submit);
       if (submit && !consentQuotes) throw new Error('Allow the completed report to be shared with local contractors for quotes.');
       if (submit && uploads.some(item => item.state !== 'done')) throw new Error('Finish or remove each pending upload before starting your screening.');
       if (submit && (screening?.uploads || []).some(item => item.status === 'open' && !uploads.some(local => local.sessionId === item.id && local.state === 'done'))) throw new Error('An upload is unfinished. Reselect its original file to resume, or remove it.');
@@ -470,35 +622,38 @@ export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean
     setSaved('');
     setDetails(previous => ({ ...previous, [key]: previous[key].includes(value) ? previous[key].filter(item => item !== value) : [...previous[key], value] }));
   }
-  function contact(key: 'name' | 'email' | 'postalCode', value: string) {
-    setSaved(''); setDetails(previous => ({ ...previous, contact: { name: '', email: '', postalCode: '', ...previous.contact, [key]: value } }));
+  function contact(key: keyof ScreeningContact, value: string) {
+    setSaved(''); setContactErrors(previous => ({ ...previous, [key]: undefined }));
+    setDetails(previous => ({ ...previous, contact: { name: '', email: '', postalCode: '', ...previous.contact, [key]: value } }));
   }
+
 
   if (screeningOffline) return <section className="screening-shell screening-card screening-offline"><ShieldCheck size={32} /><h1>Start a screening</h1><p>AI screening needs the running app. You can still save a request for specialist review in this preview.</p><div className="screening-actions"><a className="btn btn-primary" href="http://127.0.0.1:5173/#screening">Open screening<ArrowRight size={16} /></a><a className="btn btn-secondary" href="#inspection">Request a review</a></div></section>;
 
   return <div className={`screening-shell ${report ? 'screening-shell-report' : ''}`}>
     {id && <div className="screening-top-links"><a href={readOnly ? '#admin' : '#customer'}><ArrowLeft size={15} />{readOnly ? 'Client dashboard' : 'My screenings'}</a></div>}
-    {!report && <header className="screening-intro"><h1>{readOnly ? 'Screening details' : editable ? 'Screening' : screening?.status === 'needs_answers' ? 'Follow-up questions' : 'Your screening'}</h1>{screening && <span className="screening-reference">{screening.reference}</span>}</header>}
+    {!report && <header className="screening-intro"><h1>{readOnly ? 'Screening details' : editable ? 'Screening' : screening?.status === 'needs_answers' ? 'Follow-up questions' : 'Your screening'}</h1>{screening && <span className="screening-reference">REF: {screening.reference}</span>}</header>}
     {!id && !readOnly && localTesting && <button className="market-text-button screening-sample-button" disabled={busy} onClick={() => { setBusy(true); setError(''); void marketplace.sampleReport(['Basement', 'Bathroom', 'Attic'], 'Check spots near the basement window, moisture around the bathroom shower, and staining in the attic.').then(sample => { window.location.hash = `customer?id=${sample.id}`; }).catch(cause => setError(message(cause))).finally(() => setBusy(false)); }}>Create sample screening</button>}
     {loading && <div className="screening-card screening-loading" role="status"><LoaderCircle className="screening-spin" size={22} />Loading your screening…</div>}
     {loadError && <div className="screening-error" role="alert"><p>{loadError}</p><button className="btn btn-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button></div>}
     {error && <div className="screening-error" role="alert">{error}</div>}
     {report && <ScreeningResult result={report} readOnly={readOnly} />}
     {readOnly && !id && <p className="screening-notice">Open a case in the client dashboard to review its screening.</p>}
-    {!report && !loading && editable && (!id || screening) && <form className="screening-card screening-form" onSubmit={event => { event.preventDefault(); void save(true); }}>
+    {!report && !loading && editable && (!id || screening) && <form className="screening-card screening-form" noValidate onSubmit={event => { event.preventDefault(); void save(true); }}>
       {configError && <div className="screening-error" role="alert"><p>{configError}</p><button type="button" className="btn btn-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button></div>}
       {config && !config.ai.configured && <p className="screening-notice">Photo analysis is unavailable. Written answers can still be screened.</p>}
       {config?.ai.isDemo && <p className="screening-notice">Demo mode is enabled. Results will be labelled as a demonstration, not AI analysis.</p>}
-      <fieldset className="screening-consents" disabled={!!id || busy}>
+      <fieldset ref={consentRef} className={`screening-consents ${consentShake && !consented ? 'is-shaking' : ''}`} disabled={!!id || busy} onAnimationEnd={() => setConsentShake(false)}>
         <legend className="screening-sr-only">Your permission</legend>
-        <label><input type="checkbox" checked={consentAi} onChange={event => setConsentAi(event.target.checked)} /><span>Allow third-party AI providers to screen my photos, video and answers.</span></label>
-        <label><input type="checkbox" checked={consentStorage} onChange={event => setConsentStorage(event.target.checked)} /><span>Allow private storage for me and authorized staff.</span></label>
+        <label className={consentNudge && !consentAi ? 'needs-consent' : undefined}><input type="checkbox" checked={consentAi} aria-invalid={consentNudge && !consentAi} onChange={event => setConsentAi(event.target.checked)} /><span>Allow third-party AI providers to screen my photos, video and answers.</span></label>
+        <label className={consentNudge && !consentStorage ? 'needs-consent' : undefined}><input type="checkbox" checked={consentStorage} aria-invalid={consentNudge && !consentStorage} onChange={event => setConsentStorage(event.target.checked)} /><span>Allow private storage for me and authorized staff.</span></label>
+        {consentNudge && !consented && <p className="screening-consent-error" role="alert">Please tick both boxes above before adding photos or a video.</p>}
         <p className="screening-hint">Avoid faces and documents. Audio is not transcribed.</p>
       </fieldset>
       <div className="screening-field"><label htmlFor="screening-media">Photos or video <span>optional</span></label>
-        <div className={`screening-dropzone ${dragging ? 'is-dragging' : ''}`} onDragOver={event => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={event => { event.preventDefault(); setDragging(false); void addFiles(event.dataTransfer.files); }}>
-          <ImagePlus size={25} /><button type="button" className="btn btn-secondary" disabled={busy || addingFiles || !consentAi || !consentStorage} onClick={() => fileInput.current?.click()}>{addingFiles ? 'Preparing files…' : 'Add photos or a video'}</button>
-          <p>JPG, PNG, WebP, HEIC, MP4, MOV or WebM · up to {limits.maxFiles} files<br />{bytes(limits.maxUploadBytes)} per file · video up to {Math.round(limits.maxVideoSeconds / 60)} minutes</p>
+        <div className={`screening-dropzone ${dragging ? 'is-dragging' : ''} ${consented ? '' : 'is-locked'}`} onDragOver={event => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={event => { event.preventDefault(); setDragging(false); if (!consented) { nudgeConsent(); return; } void addFiles(event.dataTransfer.files); }}>
+          <ImagePlus size={25} /><button type="button" className="btn btn-secondary" disabled={busy || addingFiles} aria-disabled={!consented} onClick={() => { if (!consented) { nudgeConsent(); return; } fileInput.current?.click(); }}>{addingFiles ? 'Preparing files…' : 'Add photos or a video'}</button>
+          <p>JPG, PNG, WebP, HEIC, MP4, MOV or WebM<br />Up to {limits.maxFiles} files, {bytes(limits.maxUploadBytes)} each, videos up to {Math.round(limits.maxVideoSeconds / 60)} min</p>
           <input ref={fileInput} id="screening-media" className="screening-sr-only" type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,video/mp4,video/quicktime,video/webm" disabled={busy || addingFiles || !consentAi || !consentStorage} onChange={event => { if (event.target.files) void addFiles(event.target.files); event.target.value = ''; }} />
         </div>
 
@@ -516,11 +671,25 @@ export default function ScreeningPage({ readOnly = false }: { readOnly?: boolean
         </div>)}
         {screening?.media.map(media => <div className="screening-upload" key={media.id}><div className="screening-upload-heading"><strong>{media.name || (media.kind === 'video' ? 'Uploaded video' : 'Uploaded photo')}</strong><button type="button" className="screening-text-button" aria-label={`Remove ${media.name || media.id}`} disabled={busy} onClick={() => void removeMedia(media.id)}><Trash2 size={14} />Remove</button></div><span className="screening-hint">{media.status === 'ready' ? 'Ready for review' : media.status === 'rejected' || media.status === 'failed' ? 'Could not use this file' : 'Preparing media…'}</span>{media.rejectionReason && <p className="screening-file-error">{media.rejectionReason}</p>}</div>)}
       </div>}
-      <fieldset className="screening-choice-field" disabled={busy}><legend>Where have you noticed it?</legend><div className="screening-options">{SCREENING_AREAS.map(([value, label]) => <label className="screening-choice" key={value}><input type="checkbox" checked={details.areas.includes(value)} disabled={!details.areas.includes(value) && details.areas.length >= 6} onChange={() => toggle('areas', value)} /><span>{label}</span></label>)}</div></fieldset>
-      <fieldset className="screening-choice-field" disabled={busy}><legend>What have you noticed?</legend><div className="screening-options">{SCREENING_CONCERNS.map(([value, label]) => <label className="screening-choice" key={value}><input type="checkbox" checked={details.concerns.includes(value)} onChange={() => toggle('concerns', value)} /><span>{label}</span></label>)}</div></fieldset>
+      <fieldset className="screening-choice-field" disabled={busy}><legend>Where have you noticed it?<span className="screening-multi-hint">Select all that apply, up to 6</span></legend><div className="screening-options">{SCREENING_AREAS.map(([value, label]) => <label className="screening-choice" key={value}><input type="checkbox" checked={details.areas.includes(value)} disabled={!details.areas.includes(value) && details.areas.length >= 6} onChange={() => toggle('areas', value)} /><span>{label}</span></label>)}</div></fieldset>
+      <fieldset className="screening-choice-field" disabled={busy}><legend>What have you noticed?<span className="screening-multi-hint">Select all that apply</span></legend><div className="screening-options">{SCREENING_CONCERNS.map(([value, label]) => <label className="screening-choice" key={value}><input type="checkbox" checked={details.concerns.includes(value)} onChange={() => toggle('concerns', value)} /><span>{label}</span></label>)}</div></fieldset>
       <div className="screening-field"><label htmlFor="screening-description">Anything else? <span>optional</span></label><textarea id="screening-description" value={details.statement || ''} maxLength={1500} rows={3} disabled={busy} onChange={event => { setDetails(previous => ({ ...previous, statement: event.target.value })); setSaved(''); }} placeholder="For example, the spots appeared after a leak." /><small>Please leave names, phone numbers and addresses out of this description.</small></div>
-      <div className="screening-field-row"><div className="screening-field"><label htmlFor="screening-property">Property type</label><select id="screening-property" value={details.propertyType} disabled={busy} onChange={event => { setDetails(previous => ({ ...previous, propertyType: event.target.value })); setSaved(''); }}><option value="">Choose one</option>{SCREENING_PROPERTY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div><div className="screening-field"><label htmlFor="screening-postal">Postal code <span>optional</span></label><input id="screening-postal" value={details.contact?.postalCode || ''} maxLength={7} autoComplete="postal-code" autoCapitalize="characters" spellCheck={false} placeholder="L3Y 1A1" disabled={busy} onChange={event => contact('postalCode', event.target.value.toUpperCase())} /></div></div>
-      <details className="screening-disclosure"><summary>Add contact details <span className="screening-hint">optional</span><ChevronDown size={16} /></summary><p className="screening-hint">Include these if you want your screening attached to a named client request. No one is contacted automatically.</p><div className="screening-contact-fields"><div className="screening-field"><label htmlFor="screening-name">Name</label><input id="screening-name" value={details.contact?.name || ''} maxLength={100} autoComplete="name" disabled={busy} onChange={event => contact('name', event.target.value)} /></div><div className="screening-field"><label htmlFor="screening-email">Email</label><input id="screening-email" type="email" value={details.contact?.email || ''} maxLength={254} autoComplete="email" disabled={busy} onChange={event => contact('email', event.target.value)} /></div></div></details>
+      <div className="screening-field-row"><div className="screening-field"><label htmlFor="screening-property">Property type</label><select id="screening-property" value={details.propertyType} disabled={busy} onChange={event => { setDetails(previous => ({ ...previous, propertyType: event.target.value })); setSaved(''); }}><option value="">Choose one</option>{SCREENING_PROPERTY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></div>
+      <fieldset className="screening-contact" disabled={busy}>
+        <legend>Your contact details</legend>
+        <p className="screening-hint">Used to match you with local contractors. No one is contacted without your permission.</p>
+        <div className="screening-contact-fields">
+          <div className="screening-field"><label htmlFor={CONTACT_IDS.name}>Name</label><input id={CONTACT_IDS.name} required maxLength={100} autoComplete="name" placeholder="Your name" onChange={event => contact('name', event.target.value)} value={details.contact?.name || ''} disabled={busy} aria-invalid={!!contactErrors.name} aria-describedby={contactErrors.name ? `${CONTACT_IDS.name}-error` : undefined} />{contactError('name')}</div>
+          <div className="screening-field"><label htmlFor={CONTACT_IDS.email}>Email</label><input id={CONTACT_IDS.email} required type="email" maxLength={254} autoComplete="email" placeholder="you@example.com" onChange={event => contact('email', event.target.value)} value={details.contact?.email || ''} disabled={busy} aria-invalid={!!contactErrors.email} aria-describedby={contactErrors.email ? `${CONTACT_IDS.email}-error` : undefined} />{contactError('email')}</div>
+          <div className="screening-field"><label htmlFor={CONTACT_IDS.postalCode}>Postal code</label><input id={CONTACT_IDS.postalCode} required maxLength={7} autoComplete="postal-code" placeholder="L3Y 1A1" onChange={event => contact('postalCode', event.target.value.toUpperCase())} value={details.contact?.postalCode || ''} disabled={busy} aria-invalid={!!contactErrors.postalCode} aria-describedby={contactErrors.postalCode ? `${CONTACT_IDS.postalCode}-error` : 'screening-postal-hint'} />{contactError('postalCode')}<small id="screening-postal-hint">To help find services near you.</small></div>
+        </div>
+        <details className="screening-disclosure" ref={moreDetails}><summary>Add more details <span className="screening-hint">optional</span><ChevronDown size={16} /></summary>
+          <div className="screening-contact-fields">
+            <div className="screening-field"><label htmlFor={CONTACT_IDS.address}>Street address</label><input id={CONTACT_IDS.address} maxLength={300} autoComplete="street-address" placeholder="Your property address" value={details.contact?.address || ''} disabled={busy} onChange={event => contact('address', event.target.value)} /></div>
+            <div className="screening-field"><label htmlFor={CONTACT_IDS.phone}>Phone number</label><input id={CONTACT_IDS.phone} type="tel" maxLength={40} autoComplete="tel" placeholder="(613) 555-0123" onChange={event => contact('phone', event.target.value)} value={details.contact?.phone || ''} disabled={busy} aria-invalid={!!contactErrors.phone} aria-describedby={contactErrors.phone ? `${CONTACT_IDS.phone}-error` : undefined} />{contactError('phone')}</div>
+          </div>
+        </details>
+      </fieldset>
       {saved && <p className="screening-saved" role="status"><Check size={16} />{saved}</p>}
       <label className="screening-quotes-consent"><input type="checkbox" checked={consentQuotes} onChange={event => setConsentQuotes(event.target.checked)} disabled={busy} /><span>Automatically send my completed screening to Newmarket contractors for quotes.</span></label>
       <div className="screening-actions"><button type="button" className="btn btn-secondary" disabled={busy || addingFiles} onClick={() => void save(false)}>Save draft</button><button type="submit" className="btn btn-primary" disabled={busy || addingFiles || !consentAi || !consentStorage || !consentQuotes}>{busy ? <><LoaderCircle className="screening-spin" size={16} />Saving…</> : <>Start screening<ArrowRight size={16} /></>}</button></div>

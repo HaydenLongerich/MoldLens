@@ -49,6 +49,13 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     catch { return next(new HttpError(400, 'Invalid request path.')); }
     const segments = pathname.toLowerCase().split('/');
     if (pathname.startsWith('/@fs') && !pathname.startsWith('/@fs/')) return next(new HttpError(404, 'This file could not be found.'));
+    // Windows resolves "name::$DATA", "name::$INDEX_ALLOCATION", trailing dots/spaces
+    // and 8.3 short names ("STAFF-~1") to the real file, which would slip past the
+    // name checks below. No client file needs these, so refuse them outright.
+    const driveSegment = pathname.startsWith('/@fs/') ? 2 : -1;
+    const windowsAlias = segments.some((part, index) => (part.includes(':') && !(index === driveSegment && /^[a-z]:$/.test(part)))
+      || (part !== '.' && part !== '..' && /[. ]$/.test(part)) || /~\d/.test(part));
+    if (windowsAlias) return next(new HttpError(404, 'This file could not be found.'));
     const privateName = segments.some((part) => ['data', 'server', 'tests', '.git', '.aws', '.codex', '.agents'].includes(part) || part === '.env' || part.startsWith('.env.') || part.startsWith('staff-accounts.json') || part === 'staff-setup-code');
     const filePath = pathname.startsWith('/@fs/') ? path.resolve(pathname.slice('/@fs'.length)) : path.resolve(projectDirectory, `.${pathname}`);
     const privateData = filePath.toLowerCase() === dataDirectory.toLowerCase() || filePath.toLowerCase().startsWith(`${dataDirectory.toLowerCase()}${path.sep}`);

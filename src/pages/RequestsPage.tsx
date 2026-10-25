@@ -80,7 +80,7 @@ export default function RequestsPage({ onNavigate }: PageProps) {
                 <p className="simple-requests-next">{statusDescriptions[request.status]}</p>
                 {request.screening && <div className="screening-linked-request"><span>Screening: {SCREENING_STATUS_LABELS[request.screening.status]}</span><a href={`#screening?id=${encodeURIComponent(request.screening.id)}`}>{request.screening.reportAvailable ? 'View screening report' : request.screening.status === 'needs_answers' ? 'Answer screening questions' : 'View screening'}<ArrowRight size={15} /></a></div>}
                 <div className="simple-requests-card-bottom">
-                  <span className="simple-requests-reference my-request-id">{request.id}</span>
+                  <span className="simple-requests-reference my-request-id">REF: {request.id}</span>
                   <button className="simple-requests-toggle" aria-expanded={isOpen} aria-controls={`details-${request.id}`} onClick={() => setExpanded(isOpen ? null : request.id)}>
                     {isOpen ? 'Hide details' : 'View details'}<ChevronDown size={17} />
                   </button>

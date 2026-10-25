@@ -8,7 +8,7 @@ import type { ReportContent, ReportInputSnapshot } from "./synthesize";
  */
 
 export interface ValidationIssue {
-  code: "prohibited_assertion" | "ungrounded_claim" | "unknown_evidence_ref" | "missing_disclosure" | "urgency_guidance_missing" | "empty_report";
+  code: "prohibited_assertion" | "ungrounded_claim" | "unknown_evidence_ref" | "missing_disclosure" | "urgency_guidance_missing" | "empty_report" | "invented_measurement";
   path: string;
   detail: string;
 }
@@ -52,6 +52,27 @@ export function validateReport(content: ReportContent, snap: ReportInputSnapshot
     check(`recommendations[${i}].text`, r.text);
     check(`recommendations[${i}].rationale`, r.rationale);
   });
+
+  // A remote screening has no instruments. These checks must say so, and nothing may carry a reading.
+  const INSTRUMENT_ONLY = new Set(["moisture", "humidity", "thermal", "air"]);
+  const READING = /\b\d+(\.\d+)?\s*(%|ppm|°|degrees?|rh\b|cfu|spores?\/)/i;
+  (content.checks ?? []).forEach((c, i) => {
+    check(`checks[${i}].label`, c.label);
+    check(`checks[${i}].finding`, c.finding);
+    check(`checks[${i}].needs`, c.needs);
+    if (INSTRUMENT_ONLY.has(c.id) && c.status !== "not_measured") issues.push({ code: "invented_measurement", path: `checks[${i}]`, detail: `${c.id} requires an instrument and cannot be ${c.status}` });
+    if (READING.test(`${c.finding} ${c.needs}`)) issues.push({ code: "invented_measurement", path: `checks[${i}]`, detail: "Check text contains a measurement value" });
+  });
+  if (content.professional) {
+    const p = content.professional;
+    p.inspectionFocus.forEach((f, i) => f.items.forEach((t, j) => check(`professional.inspectionFocus[${i}].items[${j}]`, t)));
+    p.typicalWork.forEach((w, i) => {
+      check(`professional.typicalWork[${i}].step`, w.step);
+      check(`professional.typicalWork[${i}].detail`, w.detail);
+    });
+    p.quoteChecklist.forEach((q, i) => check(`professional.quoteChecklist[${i}]`, q));
+    check("professional.costNote", p.costNote);
+  }
 
   (content.highlights ?? []).forEach((h, i) => {
     check(`highlights[${i}].location`, h.location);
@@ -111,7 +132,8 @@ export function toPreview(content: ReportContent) {
     highlights: content.highlights ?? [],
     unknowns: content.unknowns.slice(0, 3),
     safetyGuidance: content.safetyGuidance,
-    recommendations: content.recommendations.map((r) => ({ id: r.id, text: r.text })),
+    recommendations: content.recommendations.map((r) => ({ id: r.id, when: r.when, text: r.text })),
+    checks: content.checks,
     disclosure: content.disclosure,
     provenance: { isMock: content.provenance.isMock, generatedAt: content.generatedAt },
   };

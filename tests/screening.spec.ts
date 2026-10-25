@@ -22,7 +22,6 @@ test('written screening persists, asks questions, publishes a free report, and l
   await page.getByLabel('Anything else?', { exact: false }).fill('Browser fixture: spots around a basement window. No photos were supplied.');
   await page.getByLabel('Property type', { exact: true }).selectOption('house');
   await page.getByLabel('Region', { exact: true }).selectOption('ON');
-  await page.locator('summary').filter({ hasText: 'Add contact details' }).click();
   await page.getByLabel('Name', { exact: true }).fill('Screening Browser Test');
   await page.getByLabel('Email', { exact: true }).fill('screening-browser@example.test');
   await page.getByLabel('Postal code', { exact: true }).fill('K1S 3W7');
@@ -49,10 +48,12 @@ test('written screening persists, asks questions, publishes a free report, and l
   for (const question of await questions.all()) await question.getByLabel('Not sure', { exact: true }).check();
   await page.getByRole('button', { name: 'See my results', exact: true }).click();
   await expect(page.locator('.screening-report')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.screening-badge')).toHaveText(/Limited screening|Inconclusive screening/);
+  await expect(page.locator('article.doc')).toContainText(/Limited screening|Inconclusive screening/);
   await expect(page.locator('.screening-highlights')).toHaveCount(0);
-  await page.getByText('Your answers', { exact: true }).click();
-  await expect(page.locator('.screening-context')).toContainText('No photos were supplied.');
+  await expect(page.locator('article.doc')).toContainText('Your answers');
+  await expect(page.locator('article.doc')).toContainText('No photos were supplied.');
+  // Customers get the short report; the measurement table is for staff and contractors.
+  await expect(page.locator('article.doc')).not.toContainText('Checks and measurements');
   await page.screenshot({ path: testInfo.outputPath('screening-written-report.png'), fullPage: true });
   await page.reload();
   await expect(page.locator('.screening-report')).toBeVisible();
