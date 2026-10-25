@@ -12,11 +12,13 @@ const javascript = await readFile(path.join(directory, entry[1].replace(/^\//, '
 // The standalone file is a customer preview; staff cases stay on the authenticated server.
 const seeds = JSON.stringify({ requests: [], contractors }).replaceAll('<', '\\u003c');
 html = html.replace(entry[0], () => `<script>window.__MOLDLENS_DEMO__=${seeds};</script><script type="module">${javascript.replaceAll('</script', '<\\/script')}</script>`);
+const landingFont = (await readFile(path.join(directory, 'fonts/mona-sans.woff2'))).toString('base64');
 const stylesheets = [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*>/g)];
 for (const match of stylesheets) {
   const href = match[0].match(/href="([^"]+)"/)?.[1];
   if (!href?.startsWith('/assets/')) continue;
-  const css = await readFile(path.join(directory, href.slice(1)), 'utf8');
+  const css = (await readFile(path.join(directory, href.slice(1)), 'utf8'))
+    .replaceAll('/fonts/mona-sans.woff2', 'data:font/woff2;base64,' + landingFont);
   html = html.replace(match[0], () => `<style>${css}</style>`);
 }
 html = html.replace('href="/favicon.svg"', 'href="./favicon.svg"');

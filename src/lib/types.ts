@@ -62,5 +62,5 @@ export interface Contractor {
   sourceUrl: string;
 }
 export type CustomerRequest = Omit<InspectionRequest, 'priority' | 'notes' | 'source'>;
-export type Page = 'inspection' | 'screening' | 'requests' | 'admin' | 'contractors' | 'login';
+export type Page = 'home' | 'inspection' | 'screening' | 'requests' | 'admin' | 'contractors' | 'login' | 'customer' | 'partner';
 export interface PageProps { onNavigate: (page: Page) => void; }

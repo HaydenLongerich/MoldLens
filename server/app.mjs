@@ -7,6 +7,7 @@ import { receiveUploads } from './uploads.mjs';
 import { HttpError, validateIntake, validateNote, validateUpdates } from './validation.mjs';
 import { contractors } from './contractors.mjs';
 import { createAuth, customerRecord, staffRecord } from './auth.mjs';
+import { registerMarketplace } from './marketplace.mjs';
 
 export const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next);
@@ -47,6 +48,7 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     }
     catch { return next(new HttpError(400, 'Invalid request path.')); }
     const segments = pathname.toLowerCase().split('/');
+    if (pathname.startsWith('/@fs') && !pathname.startsWith('/@fs/')) return next(new HttpError(404, 'This file could not be found.'));
     const privateName = segments.some((part) => ['data', 'server', 'tests', '.git', '.aws', '.codex', '.agents'].includes(part) || part === '.env' || part.startsWith('.env.') || part.startsWith('staff-accounts.json') || part === 'staff-setup-code');
     const filePath = pathname.startsWith('/@fs/') ? path.resolve(pathname.slice('/@fs'.length)) : path.resolve(projectDirectory, `.${pathname}`);
     const privateData = filePath.toLowerCase() === dataDirectory.toLowerCase() || filePath.toLowerCase().startsWith(`${dataDirectory.toLowerCase()}${path.sep}`);
@@ -106,9 +108,10 @@ export async function createApp({ dataDirectory = process.env.MOLDLENS_DATA_DIR 
     response.status(201).json(staffRecord(await store.addNote(request.params.id, validateNote(request.body))));
   }));
   let screening;
+  const marketplace = await registerMarketplace(app, { dataDirectory, auth, ownsScreening: (req, id) => screening?.ownsCustomerScreening(req, id) || false });
   if (screeningOptions !== false) {
     const { registerScreeningRoutes } = await import('./screening/runtime.mjs');
-    screening = await registerScreeningRoutes(app, { auth, store, dataDirectory, ...screeningOptions });
+    screening = await registerScreeningRoutes(app, { auth, store, dataDirectory, ...screeningOptions, onScreeningUpdate: marketplace.syncScreening });
   }
   app.use('/api', (_request, _response, next) => next(new HttpError(404, 'This API endpoint could not be found.')));
   app.use((error, _request, response, _next) => {

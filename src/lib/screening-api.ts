@@ -48,7 +48,7 @@ export const screeningApi = {
   finishUpload: (id: string, signal?: AbortSignal) => request<{ assetId: string }>(`/api/screening-uploads/${encodeURIComponent(id)}/complete`, { method: 'POST', signal }),
   cancelUpload: (id: string) => request<{ ok: true }>(`/api/screening-uploads/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   removeMedia: (id: string) => request<{ ok: true }>(`/api/screening-assets/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  submit: (id: string) => request<Screening>(`${endpoint(id)}/submit`, { method: 'POST' }),
+  submit: (id: string, contractorSharing = false) => request<Screening>(`${endpoint(id)}/submit`, { method: 'POST', body: JSON.stringify({ contractorSharing, city: 'Newmarket' }) }),
   retry: (id: string) => request<Screening>(`${endpoint(id)}/retry`, { method: 'POST' }),
   questions: (id: string, signal?: AbortSignal) => request<ScreeningQuestions>(`${endpoint(id)}/questions`, { signal }),
   answers: (id: string, answers: { questionId: string; value: string | string[] }[]) => request<{ done: boolean; remaining: number }>(`${endpoint(id)}/answers`, { method: 'POST', body: JSON.stringify({ answers, finish: true }) }),

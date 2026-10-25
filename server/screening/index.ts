@@ -48,6 +48,8 @@ export async function registerScreeningRoutes(app: any, options: any) {
   await db.execute(sql`CREATE TABLE IF NOT EXISTS moldlens_screening_links (
     assessment_id uuid PRIMARY KEY REFERENCES assessments(id) ON DELETE CASCADE, request_id text,
     contact jsonb NOT NULL DEFAULT '{}'::jsonb, owner_hash text NOT NULL)`);
+  await db.execute(sql`ALTER TABLE moldlens_screening_links ADD COLUMN IF NOT EXISTS contractor_sharing boolean NOT NULL DEFAULT false`);
+  await db.execute(sql`ALTER TABLE moldlens_screening_links ADD COLUMN IF NOT EXISTS sharing_city text`);
   await db.execute(sql`CREATE TABLE IF NOT EXISTS moldlens_screening_upload_names (
     upload_id uuid PRIMARY KEY REFERENCES upload_sessions(id) ON DELETE CASCADE, name text NOT NULL)`);
   await db.insert(organizations).values({ slug: 'mold-busters', name: 'MoldLens', serviceRegions: ['ON', 'QC'], policyVersion: POLICY_VERSION }).onConflictDoNothing();
@@ -146,8 +148,19 @@ export async function registerScreeningRoutes(app: any, options: any) {
   async function syncClient(id: string) {
     if (!clientStore) return;
     const current = await detail(id);
-    const binding = asRows(await db.execute(sql`SELECT owner_hash,contact,request_id FROM moldlens_screening_links WHERE assessment_id=${id}::uuid`))[0];
+    const binding = asRows(await db.execute(sql`SELECT owner_hash,contact,request_id,contractor_sharing,sharing_city FROM moldlens_screening_links WHERE assessment_id=${id}::uuid`))[0];
     if (!binding || !current.details) return;
+    if (binding.contractor_sharing && options.onScreeningUpdate) {
+      const [published] = current.reportAvailable ? await db.select().from(reportVersions).where(and(eq(reportVersions.assessmentId, id), inArray(reportVersions.status, ['published', 'validated']))).orderBy(desc(reportVersions.version)).limit(1) : [];
+      const content: any = published && (published.validation as any)?.passed ? published.content : null;
+      await options.onScreeningUpdate({ id, reference: current.reference, status: current.status, reportAvailable: current.reportAvailable,
+        sharingAllowed: true, customerOwnerHash: binding.owner_hash, city: binding.sharing_city,
+        createdAt: current.createdAt, area: current.details.areas.map(area => AREAS.find(item => item.id === area)?.label ?? area).join(', ') || 'Property',
+        description: current.details.statement || current.details.concerns.map(concern => CONCERNS.find(item => item.id === concern)?.label ?? concern).join(', '),
+        projectAreas: current.details.areas.map(areaId => ({ id: areaId, label: AREAS.find(area => area.id === areaId)?.label ?? areaId,
+          description: '', findings: (content?.areas?.find((area: any) => area.area === areaId)?.findings || []).map((finding: any) => finding.statement) })),
+        summary: content?.summary?.headline || '', summaryPoints: content?.summary?.points || [], recommendations: (content?.recommendations || []).map((item: any) => item.text), findings: (content?.areas || []).flatMap((area: any) => (area.findings || []).map((finding: any) => finding.statement)) });
+    }
     const contact = binding.contact ?? {};
     const attachments = current.media.filter(m => m.status === 'ready').map(m => ({ id: m.id, name: m.name, type: m.kind === 'video' ? 'video/mp4' : 'image/jpeg', size: m.sizeBytes, url: m.previewUrl }));
     const screening = { id, reference: current.reference, status: current.status, reportAvailable: current.reportAvailable };
@@ -278,6 +291,11 @@ export async function registerScreeningRoutes(app: any, options: any) {
   router.post('/screenings/:id/submit', wrap(async (req: any, res: any) => {
     await serial(req.params.id, async () => {
       const { a, p } = await permitted(req, req.params.id, 'assessment.read', false);
+      if (req.body?.contractorSharing === true) {
+        if (req.body.city !== 'Newmarket') throw new ValidationError('Contractor quotes are currently available in Newmarket.');
+        if ((await detail(a.id)).details?.region !== 'ON') throw new ValidationError('Newmarket contractor quotes require an Ontario screening.');
+        await db.execute(sql`UPDATE moldlens_screening_links SET contractor_sharing=true,sharing_city='Newmarket' WHERE assessment_id=${a.id}::uuid`);
+      }
       if (!['draft', 'uploading'].includes(a.status)) { await syncClient(a.id); return; }
       const pending = await db.select().from(uploadSessions).where(and(eq(uploadSessions.assessmentId, a.id), eq(uploadSessions.status, 'open')));
       if (pending.length) throw new ValidationError('Finish or remove your uploads before submitting.');
@@ -362,7 +380,7 @@ export async function registerScreeningRoutes(app: any, options: any) {
   async function runJobs(maxJobs = 25, stopWhenRequested = false) {
     let count = 0;
     while (count < maxJobs && (!stopWhenRequested || !stopped) && await runOnce(deps as any, `moldlens-${process.pid}`)) count++;
-    const linked = asRows(await db.execute(sql`SELECT assessment_id FROM moldlens_screening_links WHERE request_id IS NOT NULL`));
+    const linked = asRows(await db.execute(sql`SELECT l.assessment_id FROM moldlens_screening_links l JOIN assessments a ON a.id=l.assessment_id WHERE l.request_id IS NOT NULL OR a.status::text NOT IN ('draft','uploading')`));
     for (const row of linked) await syncClient(row.assessment_id);
     return count;
   }
@@ -377,6 +395,11 @@ export async function registerScreeningRoutes(app: any, options: any) {
     if (!stopped) { timer = setTimeout(tick, 1000); timer.unref?.(); }
   }
   return { db, handle, objectStore, config: cfg, runJobs,
+    async ownsCustomerScreening(req: any, id: string) {
+      const owner = auth.getCustomerHash(req);
+      if (!owner || !uuid(id)) return false;
+      return asRows(await db.execute(sql`SELECT 1 FROM moldlens_screening_links WHERE assessment_id=${id}::uuid AND owner_hash=${owner}`)).length > 0;
+    },
     start() { if (!stopped || closing) return; stopped = false; void tick(); },
     stop() {
       if (closing) return closing;
