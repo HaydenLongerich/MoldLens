@@ -171,6 +171,9 @@ test('login failures are generic and repeated attempts are throttled', async () 
   assert.ok(Number(limited.headers['retry-after']) > 0);
 }));
 
+// Vite's /@fs/ form of an absolute path on any platform (C:\x -> /@fs/C:/x).
+const fsUrl = (directory) => `/@fs/${directory.replaceAll('\\', '/').replace(/^\/+/, '')}`;
+
 test('cross-origin authentication changes are rejected and private project files are not served', async () => workspace(async ({ app, dataDirectory }) => {
   // Model Vite/static middleware mounted after createApp. Without the guard, a
   // private path would reach this successful fallback rather than Express's 404.
@@ -188,9 +191,13 @@ test('cross-origin authentication changes are rejected and private project files
     '/DATA/requests.json', '/Data/staff-accounts.json', '/%64ata%2Fstaff-setup-code',
     '/%2564ata/staff-setup-code', '/%2564ata%252Fstaff-setup-code', '/src/../data/requests.json',
     '/%2573rc%252F..%252F%2564ata%252Frequests.json',
-    `/@fs${path.join(dataDirectory, 'requests.json')}`,
-    `/@fs${path.join(dataDirectory.toUpperCase(), 'requests.json')}`,
-    `/@fs${path.join(dataDirectory, 'STAFF-SETUP-CODE')}`,
+    `${fsUrl(dataDirectory)}/requests.json`,
+    `${fsUrl(dataDirectory.toUpperCase())}/requests.json`,
+    `${fsUrl(dataDirectory)}/STAFF-SETUP-CODE`,
+    // Windows aliases: NTFS streams, trailing dots/spaces and 8.3 short names.
+    '/.env::$DATA', '/.env::$DATA?raw', '/.env.', '/.env%20', '/data::$INDEX_ALLOCATION/requests.json',
+    '/DATA::$index_allocation/staff-setup-code::$DATA', '/data./requests.json', '/server::$INDEX_ALLOCATION/auth.mjs',
+    '/tests::$INDEX_ALLOCATION/auth.test.mjs', '/STAFF-~1', `${fsUrl(dataDirectory)}::$INDEX_ALLOCATION/requests.json`,
   ]) {
     assertDenied(await dispatch(app, { url }));
   }

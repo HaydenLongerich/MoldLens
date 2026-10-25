@@ -291,6 +291,13 @@ export async function registerScreeningRoutes(app: any, options: any) {
   router.post('/screenings/:id/submit', wrap(async (req: any, res: any) => {
     await serial(req.params.id, async () => {
       const { a, p } = await permitted(req, req.params.id, 'assessment.read', false);
+      // Same required contact fields as the main request form.
+      if (['draft', 'uploading'].includes(a.status)) {
+        const contact = (await linkFor(a.id))?.contact ?? {};
+        if (!contact.name || contact.name.length < 2) throw new ValidationError('Please enter your name.', 'name');
+        if (!contact.email) throw new ValidationError('Please enter a valid email address.', 'email');
+        if (!contact.postalCode) throw new ValidationError('Enter a Canadian postal code, like L3Y 1A1.', 'postalCode');
+      }
       if (req.body?.contractorSharing === true) {
         const details = (await detail(a.id)).details;
         if (details?.region !== 'ON') throw new ValidationError('Contractor matching currently supports Ontario postal codes.');

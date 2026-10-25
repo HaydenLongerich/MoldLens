@@ -9,7 +9,7 @@ import { sql } from 'drizzle-orm';
 import { createApp } from '../server/app.mjs';
 import { dispatch, jsonRequest, cookieHeader, withCookie, createStaff, setupCode } from './http-helpers.mjs';
 
-const context = { propertyType: 'house', region: 'ON', areas: ['basement'], concerns: ['visible_spots', 'water_damage'], statement: 'Spots below a window after rain.' };
+const context = { propertyType: 'house', region: 'ON', areas: ['basement'], concerns: ['visible_spots', 'water_damage'], statement: 'Spots below a window after rain.', contact: { name: 'Test homeowner', email: 'owner@example.test', postalCode: 'K1S 3W7' } };
 const consent = { consentAiProcessing: true, consentMediaStorage: true };
 const usage = { inputTokens: 10, outputTokens: 10, images: 1, costUsd: 0 };
 const safeModel = {
@@ -101,6 +101,20 @@ test('screening consent, saved context, customer isolation, staff separation and
   const all = await call(app, staff, 'GET', '/api/screenings?admin=true');
   assert.equal(all.json().length, 2);
   assert.ok(!JSON.stringify(all.json()).includes('customerOwnerHash'));
+});
+
+test('submit requires name, email and postal code like the main request form', async t => {
+  const { app } = await fixture(t);
+  const owner = await draft(app);
+  const { contact: _omit, ...withoutContact } = context;
+  assert.equal((await call(app, owner, 'PATCH', endpoint(owner), withoutContact)).status, 200);
+  const missing = await call(app, owner, 'POST', endpoint(owner, '/submit'), {});
+  assert.equal(missing.status, 400);
+  assert.match(missing.body.toString(), /name/i);
+  await configure(app, owner, { contact: { name: 'Test homeowner', email: 'owner@example.test', postalCode: '' } });
+  assert.match((await call(app, owner, 'POST', endpoint(owner, '/submit'), {})).body.toString(), /postal code/i);
+  await configure(app, owner);
+  assert.equal((await call(app, owner, 'POST', endpoint(owner, '/submit'), {})).status, 200);
 });
 
 test('resumable uploads enforce offsets, idempotency, open-upload quota, cancellation and ownership', async t => {
@@ -334,6 +348,20 @@ test('form-only reports with answered follow-ups describe rules and answers accu
   assert.equal(report.provenance.modelProvider, 'none');
   assert.equal(report.provenance.summaryModel, undefined);
   assert.equal(summaryCalls, 0);
+  // Document sections: grouped steps, honest checks with no readings, a professional outlook with no prices.
+  assert.equal(report.schemaVersion, 'report-v2');
+  assert.ok(report.recommendations.every(r => ['now', 'next', 'ongoing'].includes(r.when)));
+  const checks = Object.fromEntries(report.checks.map(c => [c.id, c]));
+  for (const id of ['moisture', 'humidity', 'thermal', 'air']) {
+    assert.equal(checks[id].status, 'not_measured', id);
+    assert.ok(checks[id].needs.length > 0, id);
+  }
+  assert.equal(checks.visual.status, 'not_measured');
+  assert.ok(!/\d\s*(%|ppm|°)/.test(JSON.stringify(report.checks)));
+  assert.ok(report.professional.inspectionFocus.some(f => f.area === 'Basement'));
+  assert.ok(report.professional.typicalWork.length >= 4);
+  assert.ok(report.professional.quoteChecklist.length > 0);
+  assert.ok(!/\$\s?\d/.test(JSON.stringify(report.professional)));
   const persisted = await screening.db.execute(sql`SELECT status FROM report_versions WHERE assessment_id=${owner.id}::uuid`);
   assert.equal(persisted.rows[0].status, 'published');
 });

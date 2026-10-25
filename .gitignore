@@ -12,3 +12,6 @@ server/screening/runtime.mjs
 server/screening/runtime.mjs.map
 .screening-model-test-*/
 .DS_Store
+
+# Live camera review screenshots
+screenshots/

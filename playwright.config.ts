@@ -19,6 +19,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:5175',
     browserName: 'chromium',
+    // Fake camera so the live phone flow can run headless; it has no effect on other specs.
+    launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
     viewport: { width: 1440, height: 1100 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
